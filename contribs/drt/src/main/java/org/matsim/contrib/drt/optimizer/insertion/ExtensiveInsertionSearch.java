@@ -19,6 +19,7 @@
 
 package org.matsim.contrib.drt.optimizer.insertion;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -29,7 +30,10 @@ import org.matsim.contrib.drt.optimizer.VehicleData.Entry;
 import org.matsim.contrib.drt.optimizer.insertion.InsertionGenerator.Insertion;
 import org.matsim.contrib.drt.passenger.DrtRequest;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
+import org.matsim.contrib.drt.schedule.DrtDriveTask;
+import org.matsim.contrib.drt.schedule.DrtStayTask;
 import org.matsim.contrib.dvrp.path.OneToManyPathSearch.PathData;
+import org.matsim.contrib.dvrp.schedule.Task;
 import org.matsim.core.mobsim.framework.MobsimTimer;
 
 /**
@@ -73,9 +77,35 @@ public class ExtensiveInsertionSearch implements DrtInsertionSearch<PathData> {
 		DetourData<Double> admissibleTimeData = admissibleDetourTimesProvider.getDetourData(drtRequest);
 		KNearestInsertionsAtEndFilter kNearestInsertionsAtEndFilter = new KNearestInsertionsAtEndFilter(
 				insertionParams.getNearestInsertionsAtEndLimit(), insertionParams.getAdmissibleBeelineSpeedFactor());
-
+		
+		// If zone based matching is turned on, we need to filter out some of the vehicles when exploring insertion
+		Collection<Entry> filteredVEntries = new ArrayList<>();
+		if (insertionParams.getZoneBasedMacthing()) {
+		    for (Entry entry : vEntries) {
+			Task currentTask = entry.vehicle.getSchedule().getCurrentTask();
+			if (currentTask instanceof DrtStayTask) {
+			// For idling vehicle, we will consider it,  if it is in the same zone of the request
+			    
+			} else if (currentTask instanceof DrtDriveTask) {
+				DrtDriveTask drtDriveTask = (DrtDriveTask) currentTask;
+				drtDriveTask.getTaskType().name();
+			    // For relocating vehicle, we will consider it, if its relocation destination is in the same zone of the request
+			    
+				// For passenger carrying vehicles or vehicles in pick up drive, we will always consider the vehicle
+			    
+			} else {
+			    // For picking up/dropping off vehicles (DrtStopTask), we will always consider them (for sharing ride)
+			    filteredVEntries.add(entry);
+			}
+		    }
+		}else {
+		    filteredVEntries.addAll(vEntries);
+		}
+		
+		
+		
 		// Parallel outer stream over vehicle entries. The inner stream (flatmap) is sequential.
-		List<Insertion> filteredInsertions = forkJoinPool.submit(() -> vEntries.parallelStream()
+		List<Insertion> filteredInsertions = forkJoinPool.submit(() -> filteredVEntries.parallelStream()
 				//generate feasible insertions (wrt occupancy limits)
 				.flatMap(e -> insertionGenerator.generateInsertions(drtRequest, e).stream())
 				//map insertions to insertions with admissible detour times (i.e. admissible beeline speed factor)
@@ -93,6 +123,6 @@ public class ExtensiveInsertionSearch implements DrtInsertionSearch<PathData> {
 		//TODO could use a parallel stream within forkJoinPool, however the idea is to have as few filteredInsertions
 		// as possible, and then using a parallel stream does not make sense.
 		return bestInsertionFinder.findBestInsertion(drtRequest,
-				filteredInsertions.stream().map(pathData::createInsertionWithDetourData));
-	}
+			filteredInsertions.stream().map(pathData::createInsertionWithDetourData));
+	    }
 }

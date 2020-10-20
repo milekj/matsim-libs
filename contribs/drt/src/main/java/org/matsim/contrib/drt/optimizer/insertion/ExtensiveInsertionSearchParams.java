@@ -37,6 +37,9 @@ public class ExtensiveInsertionSearchParams extends DrtInsertionSearchParams {
 	@DecimalMin("1.0")
 	private double admissibleBeelineSpeedFactor = 1.5;
 
+	public static final String ZONE_BASED_MATCHING = "zoneBasedMatching";
+	private boolean zoneBasedMatching = false;
+
 	public ExtensiveInsertionSearchParams() {
 		super(SET_NAME);
 	}
@@ -59,5 +62,15 @@ public class ExtensiveInsertionSearchParams extends DrtInsertionSearchParams {
 	@StringSetter(ADMISSIBLE_BEELINE_SPEED_FACTOR)
 	public void setAdmissibleBeelineSpeedFactor(double admissibleBeelineSpeedFactor) {
 		this.admissibleBeelineSpeedFactor = admissibleBeelineSpeedFactor;
+	}
+	
+	@StringSetter(ZONE_BASED_MATCHING)
+	public void setZoneBasedMatching(boolean trueOrFalse) {
+		this.zoneBasedMatching = trueOrFalse;
+	}
+	
+	@StringGetter(ZONE_BASED_MATCHING)
+	public boolean getZoneBasedMacthing() {
+		return zoneBasedMatching;
 	}
 }

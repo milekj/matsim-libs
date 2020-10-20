@@ -19,6 +19,7 @@
 package org.matsim.contrib.edrt.schedule;
 
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.contrib.drt.schedule.DrtRelocateTask;
 import org.matsim.contrib.drt.schedule.DrtTaskFactory;
 import org.matsim.contrib.drt.schedule.DrtTaskType;
 import org.matsim.contrib.dvrp.fleet.DvrpVehicle;
@@ -56,5 +57,11 @@ public class EDrtTaskFactoryImpl implements DrtTaskFactory {
 			double totalEnergy) {
 		return new EDrtChargingTask(beginTime, endTime, charger, ((EvDvrpVehicle)vehicle).getElectricVehicle(),
 				totalEnergy);
+	}
+
+	@Override
+	public DrtRelocateTask createRelocateTask(DvrpVehicle vehicle, VrpPathWithTravelData path) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

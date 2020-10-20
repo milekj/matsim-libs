@@ -40,4 +40,9 @@ public class DrtTaskFactoryImpl implements DrtTaskFactory {
 	public DrtStayTask createStayTask(DvrpVehicle vehicle, double beginTime, double endTime, Link link) {
 		return new DrtStayTask(beginTime, endTime, link);
 	}
+
+	@Override
+	public DrtRelocateTask createRelocateTask(DvrpVehicle vehicle, VrpPathWithTravelData path) {
+		return new DrtRelocateTask(path);
+	}
 }

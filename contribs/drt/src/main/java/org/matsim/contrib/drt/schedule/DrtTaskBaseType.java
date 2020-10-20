@@ -28,8 +28,9 @@ import org.matsim.contrib.dvrp.schedule.Task;
 public enum DrtTaskBaseType {
 	STAY, // idle
 	STOP, // stopped to drop off and pick up passengers
-	DRIVE; // driving with/without passengers
-
+	DRIVE, // driving with/without passengers
+	RELOCATE; // rebalancing drive (not driving toward any passenger)
+	
 	public static DrtTaskBaseType getBaseType(Task task) {
 		return ((DrtTaskType)task.getTaskType()).getBaseType().get();
 	}
