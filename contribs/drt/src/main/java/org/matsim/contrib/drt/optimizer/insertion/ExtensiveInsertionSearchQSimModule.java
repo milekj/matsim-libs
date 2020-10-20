@@ -21,6 +21,7 @@
 package org.matsim.contrib.drt.optimizer.insertion;
 
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.contrib.drt.analysis.zonal.DrtZonalSystem;
 import org.matsim.contrib.drt.optimizer.QSimScopeForkJoinPoolHolder;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
 import org.matsim.contrib.dvrp.path.OneToManyPathSearch;
@@ -50,10 +51,10 @@ public class ExtensiveInsertionSearchQSimModule extends AbstractDvrpModeQSimModu
 	@Override
 	protected void configureQSim() {
 		bindModal(new TypeLiteral<DrtInsertionSearch<OneToManyPathSearch.PathData>>() {
-		}).toProvider(modalProvider(
-				getter -> new ExtensiveInsertionSearch(getter.getModal(DetourPathCalculator.class), drtCfg,
-						getter.get(MobsimTimer.class), getter.getModal(QSimScopeForkJoinPoolHolder.class).getPool(),
-						getter.getModal(InsertionCostCalculator.PenaltyCalculator.class))));
+		}).toProvider(modalProvider(getter -> new ExtensiveInsertionSearch(getter.getModal(DetourPathCalculator.class),
+				drtCfg, getter.get(MobsimTimer.class), getter.getModal(QSimScopeForkJoinPoolHolder.class).getPool(),
+				getter.getModal(InsertionCostCalculator.PenaltyCalculator.class),
+				getter.getModal(DrtZonalSystem.class))));
 
 		addModalComponent(MultiInsertionDetourPathCalculator.class, new ModalProviders.AbstractProvider<>(getMode()) {
 			@Inject
@@ -63,8 +64,8 @@ public class ExtensiveInsertionSearchQSimModule extends AbstractDvrpModeQSimModu
 			@Override
 			public MultiInsertionDetourPathCalculator get() {
 				Network network = getModalInstance(Network.class);
-				TravelDisutility travelDisutility = getModalInstance(
-						TravelDisutilityFactory.class).createTravelDisutility(travelTime);
+				TravelDisutility travelDisutility = getModalInstance(TravelDisutilityFactory.class)
+						.createTravelDisutility(travelTime);
 				return new MultiInsertionDetourPathCalculator(network, travelTime, travelDisutility, drtCfg);
 			}
 		});

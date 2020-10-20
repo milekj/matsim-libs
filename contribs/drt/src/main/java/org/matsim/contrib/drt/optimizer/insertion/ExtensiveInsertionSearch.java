@@ -26,11 +26,13 @@ import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
+import org.matsim.api.core.v01.network.Link;
+import org.matsim.contrib.drt.analysis.zonal.DrtZonalSystem;
 import org.matsim.contrib.drt.optimizer.VehicleData.Entry;
 import org.matsim.contrib.drt.optimizer.insertion.InsertionGenerator.Insertion;
 import org.matsim.contrib.drt.passenger.DrtRequest;
 import org.matsim.contrib.drt.run.DrtConfigGroup;
-import org.matsim.contrib.drt.schedule.DrtDriveTask;
+import org.matsim.contrib.drt.schedule.DrtRelocateTask;
 import org.matsim.contrib.drt.schedule.DrtStayTask;
 import org.matsim.contrib.dvrp.path.OneToManyPathSearch.PathData;
 import org.matsim.contrib.dvrp.schedule.Task;
@@ -51,12 +53,16 @@ public class ExtensiveInsertionSearch implements DrtInsertionSearch<PathData> {
 	private final DetourPathCalculator detourPathCalculator;
 	private final BestInsertionFinder<PathData> bestInsertionFinder;
 
+	// Zonal based matching related parameters
+	private final DrtZonalSystem zonalSystem;
+
 	public ExtensiveInsertionSearch(DetourPathCalculator detourPathCalculator, DrtConfigGroup drtCfg, MobsimTimer timer,
-			ForkJoinPool forkJoinPool, InsertionCostCalculator.PenaltyCalculator penaltyCalculator) {
+			ForkJoinPool forkJoinPool, InsertionCostCalculator.PenaltyCalculator penaltyCalculator,
+			DrtZonalSystem zonalSystem) {
 		this.detourPathCalculator = detourPathCalculator;
 		this.forkJoinPool = forkJoinPool;
 
-		insertionParams = (ExtensiveInsertionSearchParams)drtCfg.getDrtInsertionSearchParams();
+		insertionParams = (ExtensiveInsertionSearchParams) drtCfg.getDrtInsertionSearchParams();
 		admissibleCostCalculator = new InsertionCostCalculator<>(drtCfg, timer, penaltyCalculator, Double::doubleValue);
 
 		// TODO use more sophisticated DetourTimeEstimator
@@ -68,6 +74,7 @@ public class ExtensiveInsertionSearch implements DrtInsertionSearch<PathData> {
 
 		bestInsertionFinder = new BestInsertionFinder<>(
 				new InsertionCostCalculator<>(drtCfg, timer, penaltyCalculator, PathData::getTravelTime));
+		this.zonalSystem = zonalSystem;
 	}
 
 	@Override
@@ -77,52 +84,68 @@ public class ExtensiveInsertionSearch implements DrtInsertionSearch<PathData> {
 		DetourData<Double> admissibleTimeData = admissibleDetourTimesProvider.getDetourData(drtRequest);
 		KNearestInsertionsAtEndFilter kNearestInsertionsAtEndFilter = new KNearestInsertionsAtEndFilter(
 				insertionParams.getNearestInsertionsAtEndLimit(), insertionParams.getAdmissibleBeelineSpeedFactor());
-		
-		// If zone based matching is turned on, we need to filter out some of the vehicles when exploring insertion
+
+		// If zone based matching is turned on, we need to filter out some of the
+		// vehicles when exploring insertion
 		Collection<Entry> filteredVEntries = new ArrayList<>();
 		if (insertionParams.getZoneBasedMacthing()) {
-		    for (Entry entry : vEntries) {
-			Task currentTask = entry.vehicle.getSchedule().getCurrentTask();
-			if (currentTask instanceof DrtStayTask) {
-			// For idling vehicle, we will consider it,  if it is in the same zone of the request
-			    
-			} else if (currentTask instanceof DrtDriveTask) {
-				DrtDriveTask drtDriveTask = (DrtDriveTask) currentTask;
-				drtDriveTask.getTaskType().name();
-			    // For relocating vehicle, we will consider it, if its relocation destination is in the same zone of the request
-			    
-				// For passenger carrying vehicles or vehicles in pick up drive, we will always consider the vehicle
-			    
-			} else {
-			    // For picking up/dropping off vehicles (DrtStopTask), we will always consider them (for sharing ride)
-			    filteredVEntries.add(entry);
+			for (Entry entry : vEntries) {
+				Task currentTask = entry.vehicle.getSchedule().getCurrentTask();
+				if (currentTask instanceof DrtStayTask) {
+					// For idling vehicle, we will consider it, if it is in the same zone of the
+					// request
+					Link currentLink = ((DrtStayTask) currentTask).getLink();
+					if (CheckIfTwoLinksInSameZone(currentLink, drtRequest.getFromLink())) {
+						filteredVEntries.add(entry);
+					}
+				} else if (currentTask instanceof DrtRelocateTask) {
+					// For rebalancing vehicle, we will consider it, if it is rebalancing to the
+					// same zone of the request
+					Link destinationLink = ((DrtRelocateTask) currentTask).getPath().getToLink();
+					if (CheckIfTwoLinksInSameZone(destinationLink, drtRequest.getFromLink())) {
+						filteredVEntries.add(entry);
+					}
+
+				} else {
+					// For other vehicle (drive with passenger, pick up drive, picking up and
+					// dropping off), we will always consider (as shared ride)
+					filteredVEntries.add(entry);
+				}
 			}
-		    }
-		}else {
-		    filteredVEntries.addAll(vEntries);
+		} else {
+			filteredVEntries.addAll(vEntries);
 		}
-		
-		
-		
-		// Parallel outer stream over vehicle entries. The inner stream (flatmap) is sequential.
+
+		// Parallel outer stream over vehicle entries. The inner stream (flatmap) is
+		// sequential.
 		List<Insertion> filteredInsertions = forkJoinPool.submit(() -> filteredVEntries.parallelStream()
-				//generate feasible insertions (wrt occupancy limits)
+				// generate feasible insertions (wrt occupancy limits)
 				.flatMap(e -> insertionGenerator.generateInsertions(drtRequest, e).stream())
-				//map insertions to insertions with admissible detour times (i.e. admissible beeline speed factor)
+				// map insertions to insertions with admissible detour times (i.e. admissible
+				// beeline speed factor)
 				.map(admissibleTimeData::createInsertionWithDetourData)
-				//optimistic pre-filtering wrt admissible cost function
-				.filter(insertion -> admissibleCostCalculator.calculate(drtRequest, insertion)
-						< InsertionCostCalculator.INFEASIBLE_SOLUTION_COST)
-				//skip insertions at schedule ends (a subset of most promising "insertionsAtEnd" will be added later)
+				// optimistic pre-filtering wrt admissible cost function
+				.filter(insertion -> admissibleCostCalculator.calculate(drtRequest,
+						insertion) < InsertionCostCalculator.INFEASIBLE_SOLUTION_COST)
+				// skip insertions at schedule ends (a subset of most promising
+				// "insertionsAtEnd" will be added later)
 				.filter(kNearestInsertionsAtEndFilter::filter)
-				//forget (admissible) detour times
+				// forget (admissible) detour times
 				.map(InsertionWithDetourData::getInsertion).collect(Collectors.toList())).join();
 		filteredInsertions.addAll(kNearestInsertionsAtEndFilter.getNearestInsertionsAtEnd());
 
 		DetourData<PathData> pathData = detourPathCalculator.calculatePaths(drtRequest, filteredInsertions);
-		//TODO could use a parallel stream within forkJoinPool, however the idea is to have as few filteredInsertions
+		// TODO could use a parallel stream within forkJoinPool, however the idea is to
+		// have as few filteredInsertions
 		// as possible, and then using a parallel stream does not make sense.
 		return bestInsertionFinder.findBestInsertion(drtRequest,
-			filteredInsertions.stream().map(pathData::createInsertionWithDetourData));
-	    }
+				filteredInsertions.stream().map(pathData::createInsertionWithDetourData));
+	}
+
+	private boolean CheckIfTwoLinksInSameZone(Link link1, Link link2) {
+		if (zonalSystem.getZoneForLinkId(link1.getId()).equals(zonalSystem.getZoneForLinkId(link2.getId()))) {
+			return true;
+		}
+		return false;
+	}
 }
