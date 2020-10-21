@@ -69,11 +69,16 @@ public class ExtensiveInsertionSearch implements DrtInsertionSearch<PathData> {
 	@Override
 	public Optional<InsertionWithDetourData<PathData>> findBestInsertion(DrtRequest drtRequest,
 			Collection<Entry> vEntries) {
+		return calculate(drtRequest, vEntries);
+	}
+
+	protected Optional<InsertionWithDetourData<PathData>> calculate(DrtRequest drtRequest,
+			Collection<Entry> vEntries) {
 		InsertionGenerator insertionGenerator = new InsertionGenerator();
 		DetourData<Double> admissibleTimeData = admissibleDetourTimesProvider.getDetourData(drtRequest);
 		KNearestInsertionsAtEndFilter kNearestInsertionsAtEndFilter = new KNearestInsertionsAtEndFilter(
 				insertionParams.getNearestInsertionsAtEndLimit(), insertionParams.getAdmissibleBeelineSpeedFactor());
-
+		
 		// Parallel outer stream over vehicle entries. The inner stream (flatmap) is sequential.
 		List<Insertion> filteredInsertions = forkJoinPool.submit(() -> vEntries.parallelStream()
 				//generate feasible insertions (wrt occupancy limits)
@@ -88,8 +93,9 @@ public class ExtensiveInsertionSearch implements DrtInsertionSearch<PathData> {
 				//forget (admissible) detour times
 				.map(InsertionWithDetourData::getInsertion).collect(Collectors.toList())).join();
 		filteredInsertions.addAll(kNearestInsertionsAtEndFilter.getNearestInsertionsAtEnd());
-
+		
 		DetourData<PathData> pathData = detourPathCalculator.calculatePaths(drtRequest, filteredInsertions);
+		
 		//TODO could use a parallel stream within forkJoinPool, however the idea is to have as few filteredInsertions
 		// as possible, and then using a parallel stream does not make sense.
 		return bestInsertionFinder.findBestInsertion(drtRequest,
