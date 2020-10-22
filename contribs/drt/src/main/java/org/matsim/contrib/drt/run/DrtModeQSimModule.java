@@ -23,6 +23,7 @@ package org.matsim.contrib.drt.run;
 import org.matsim.contrib.drt.optimizer.DrtModeOptimizerQSimModule;
 import org.matsim.contrib.drt.optimizer.insertion.ExtensiveInsertionSearchParams;
 import org.matsim.contrib.drt.optimizer.insertion.ExtensiveInsertionSearchQSimModule;
+import org.matsim.contrib.drt.optimizer.insertion.ExtensiveInsertionSearchWithZCParams;
 import org.matsim.contrib.drt.optimizer.insertion.SelectiveInsertionSearchParams;
 import org.matsim.contrib.drt.optimizer.insertion.SelectiveInsertionSearchQSimModule;
 import org.matsim.contrib.drt.passenger.DrtRequestCreator;
@@ -89,7 +90,10 @@ public class DrtModeQSimModule extends AbstractDvrpModeQSimModule {
 
 			case SelectiveInsertionSearchParams.SET_NAME:
 				return new SelectiveInsertionSearchQSimModule(drtCfg);
-
+				
+			case ExtensiveInsertionSearchWithZCParams.SET_NAME:
+				return new ExtensiveInsertionSearchQSimModule(drtCfg);
+				
 			default:
 				throw new RuntimeException(
 						"Unsupported DRT insertion search type: " + drtCfg.getDrtInsertionSearchParams().getName());
