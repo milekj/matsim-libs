@@ -69,11 +69,6 @@ public class ExtensiveInsertionSearch implements DrtInsertionSearch<PathData> {
 	@Override
 	public Optional<InsertionWithDetourData<PathData>> findBestInsertion(DrtRequest drtRequest,
 			Collection<Entry> vEntries) {
-		return calculate(drtRequest, vEntries);
-	}
-
-	protected Optional<InsertionWithDetourData<PathData>> calculate(DrtRequest drtRequest,
-			Collection<Entry> vEntries) {
 		InsertionGenerator insertionGenerator = new InsertionGenerator();
 		DetourData<Double> admissibleTimeData = admissibleDetourTimesProvider.getDetourData(drtRequest);
 		KNearestInsertionsAtEndFilter kNearestInsertionsAtEndFilter = new KNearestInsertionsAtEndFilter(
@@ -101,4 +96,5 @@ public class ExtensiveInsertionSearch implements DrtInsertionSearch<PathData> {
 		return bestInsertionFinder.findBestInsertion(drtRequest,
 				filteredInsertions.stream().map(pathData::createInsertionWithDetourData));
 	}
+
 }

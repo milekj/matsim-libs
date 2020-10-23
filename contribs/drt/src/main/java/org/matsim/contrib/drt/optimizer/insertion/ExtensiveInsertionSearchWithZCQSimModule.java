@@ -18,9 +18,9 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 
 public class ExtensiveInsertionSearchWithZCQSimModule extends AbstractDvrpModeQSimModule {
-	
+
 	private final DrtConfigGroup drtCfg;
-	
+
 	public ExtensiveInsertionSearchWithZCQSimModule(DrtConfigGroup drtCfg) {
 		super(drtCfg.getMode());
 		this.drtCfg = drtCfg;
@@ -28,12 +28,18 @@ public class ExtensiveInsertionSearchWithZCQSimModule extends AbstractDvrpModeQS
 
 	@Override
 	protected void configureQSim() {
-		bindModal(new TypeLiteral<DrtInsertionSearch<OneToManyPathSearch.PathData>>() {
-		}).toProvider(modalProvider(
-				getter -> new ExtensiveInsertionSerachWithZonalConstraints(getter.getModal(DetourPathCalculator.class), drtCfg,
+		// TODO When implementing this in the MATSim library, add a "switch" statement,
+		// so that it allows different insertion search (extensive, selective...) when
+		// constructing the class InsertionSerachWithZonalConstraints
+		bindModal(ExtensiveInsertionSearch.class).toProvider(modalProvider(
+				getter -> new ExtensiveInsertionSearch(getter.getModal(DetourPathCalculator.class), drtCfg,
 						getter.get(MobsimTimer.class), getter.getModal(QSimScopeForkJoinPoolHolder.class).getPool(),
-						getter.getModal(InsertionCostCalculator.PenaltyCalculator.class), getter.getModal(DrtZonalSystem.class))));
-		
+						getter.getModal(InsertionCostCalculator.PenaltyCalculator.class))));
+
+		bindModal(new TypeLiteral<DrtInsertionSearch<OneToManyPathSearch.PathData>>() {
+		}).toProvider(modalProvider(getter -> new InsertionSerachWithZonalConstraints(
+				getter.getModal(ExtensiveInsertionSearch.class), getter.getModal(DrtZonalSystem.class))));
+
 		addModalComponent(MultiInsertionDetourPathCalculator.class, new ModalProviders.AbstractProvider<>(getMode()) {
 			@Inject
 			@Named(DvrpTravelTimeModule.DVRP_ESTIMATED)
@@ -42,13 +48,13 @@ public class ExtensiveInsertionSearchWithZCQSimModule extends AbstractDvrpModeQS
 			@Override
 			public MultiInsertionDetourPathCalculator get() {
 				Network network = getModalInstance(Network.class);
-				TravelDisutility travelDisutility = getModalInstance(
-						TravelDisutilityFactory.class).createTravelDisutility(travelTime);
+				TravelDisutility travelDisutility = getModalInstance(TravelDisutilityFactory.class)
+						.createTravelDisutility(travelTime);
 				return new MultiInsertionDetourPathCalculator(network, travelTime, travelDisutility, drtCfg);
 			}
 		});
 		bindModal(DetourPathCalculator.class).to(modalKey(MultiInsertionDetourPathCalculator.class));
-		
+
 	}
-	
+
 }
