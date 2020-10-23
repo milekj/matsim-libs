@@ -27,8 +27,6 @@ import org.matsim.contrib.drt.optimizer.insertion.DefaultUnplannedRequestInserte
 import org.matsim.contrib.drt.optimizer.insertion.DrtInsertionSearch;
 import org.matsim.contrib.drt.optimizer.insertion.ExtensiveInsertionSearchParams;
 import org.matsim.contrib.drt.optimizer.insertion.ExtensiveInsertionSearchQSimModule;
-import org.matsim.contrib.drt.optimizer.insertion.ExtensiveInsertionSearchWithZCParams;
-import org.matsim.contrib.drt.optimizer.insertion.ExtensiveInsertionSearchWithZCQSimModule;
 import org.matsim.contrib.drt.optimizer.insertion.InsertionCostCalculator;
 import org.matsim.contrib.drt.optimizer.insertion.SelectiveInsertionSearchParams;
 import org.matsim.contrib.drt.optimizer.insertion.SelectiveInsertionSearchQSimModule;
@@ -154,9 +152,6 @@ public class DrtModeOptimizerQSimModule extends AbstractDvrpModeQSimModule {
 			case SelectiveInsertionSearchParams.SET_NAME:
 				return new SelectiveInsertionSearchQSimModule(drtCfg);
 				
-			case ExtensiveInsertionSearchWithZCParams.SET_NAME:
-				return new ExtensiveInsertionSearchWithZCQSimModule(drtCfg);
-			
 			default:
 				throw new RuntimeException(
 						"Unsupported DRT insertion search type: " + drtCfg.getDrtInsertionSearchParams().getName());

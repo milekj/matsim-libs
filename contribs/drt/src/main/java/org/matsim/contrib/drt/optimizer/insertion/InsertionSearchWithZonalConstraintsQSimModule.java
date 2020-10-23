@@ -17,11 +17,11 @@ import com.google.inject.Inject;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 
-public class ExtensiveInsertionSearchWithZCQSimModule extends AbstractDvrpModeQSimModule {
+public class InsertionSearchWithZonalConstraintsQSimModule extends AbstractDvrpModeQSimModule {
 
 	private final DrtConfigGroup drtCfg;
 
-	public ExtensiveInsertionSearchWithZCQSimModule(DrtConfigGroup drtCfg) {
+	public InsertionSearchWithZonalConstraintsQSimModule(DrtConfigGroup drtCfg) {
 		super(drtCfg.getMode());
 		this.drtCfg = drtCfg;
 	}
