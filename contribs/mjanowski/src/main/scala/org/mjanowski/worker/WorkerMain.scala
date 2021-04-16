@@ -39,6 +39,9 @@ class WorkerMain(config: MySimConfig, workerSim: WorkerSim) {
   }
 
   def update(workerId: Int, moveVehicleDtos: java.util.List[MoveVehicleDto], time: Double) = {
+    //todo czy tutaj trzeba po jednym aktorze na każdy wątek?
+    //czy one są w stanie przetwarzać te future'y równolegle?
+    //może trzeba coś w konfiguracji dispachera akki
     val future: Future[Accepted] = actorSystem.ask(ref => SendUpdate(workerId, moveVehicleDtos.asScala.toSeq, ref))
       .mapTo[Accepted]
     Await.ready(future, Duration.Inf)

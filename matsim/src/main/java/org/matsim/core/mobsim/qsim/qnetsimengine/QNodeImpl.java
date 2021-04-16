@@ -194,23 +194,29 @@ final class QNodeImpl extends AbstractQNode {
 	}
 
 	private void moveLane(QLinkI fromLink, final QLaneI fromLane, final double now ) {
+		boolean shouldCheckForStuck = false;
 		Queue<QVehicle> buffer = fromLane.getBuffer();
 		while (!buffer.isEmpty()) {
-			if (!tryMoveBatch(buffer, fromLink, fromLane, now))
+			MoveBatchResult result = tryMoveBatch(buffer, fromLink, fromLane, now);
+			if (result == MoveBatchResult.FINISHED)
+				break;
+			if (result == MoveBatchResult.SOME_REJECTED)
+				shouldCheckForStuck = true;
 				break;
 		}
-		if (!fromLane.isNotOfferingVehicle()) {
+		if (shouldCheckForStuck && !fromLane.isNotOfferingVehicle()) {
 			QVehicle veh = fromLane.getFirstVehicle();
 			if (vehicleIsStuck(fromLane, now)) {
+				Logger.getRootLogger().warn("Vehicle stuck on " + fromLane.getId() + " because " + fromLane.getLastMovementTimeOfFirstVehicle());
 				moveVehicleFromInlinkToAbort(veh, fromLane, now, fromLink.getLink().getId());
 			}
 		}
 	}
 
-	private boolean tryMoveBatch(Queue<QVehicle> buffer, QLinkI fromLink, final QLaneI fromLane, final double now) {
+	private MoveBatchResult tryMoveBatch(Queue<QVehicle> buffer, QLinkI fromLink, final QLaneI fromLane, final double now) {
 		QVehicle veh = buffer.peek();
 		if (veh == null)
-			return false;
+			return MoveBatchResult.FINISHED;
 		Id<Link> batchLinkId = veh.getDriver().chooseNextLinkId();
 		List<MoveVehicleDto> batch = new LinkedList<>();
 
@@ -218,11 +224,11 @@ final class QNodeImpl extends AbstractQNode {
 			MoveVehicleDto moveVehicleDto = addToBatch(buffer, fromLink, fromLane, now, batchLinkId);
 			if (moveVehicleDto == null) {
 				if (batch.isEmpty())
-					return false;
+					return MoveBatchResult.FINISHED;
 				else {
-//					Logger.getRootLogger().info("moving batch " + batch);
-					moveBatch(batchLinkId, batch);
-					return true;
+					return moveBatch(batchLinkId, batch) ? MoveBatchResult.CONTINUE : MoveBatchResult.FINISHED;
+					//todo co jak np. tutaj zostaną zaakceptowane 2 z 3?
+//					return true;
 				}
 			} else {
 				if (!moveVehicleDto.isAborted())
@@ -231,20 +237,20 @@ final class QNodeImpl extends AbstractQNode {
 		}
 
 		if (!batch.isEmpty()) {
-			moveBatch(batchLinkId, batch);
-			return true;
+			return moveBatch(batchLinkId, batch) ? MoveBatchResult.CONTINUE : MoveBatchResult.FINISHED;
 		}
-		return false;
+		return MoveBatchResult.FINISHED;
 	}
 
-	private void moveBatch(Id<Link> linkId, List<MoveVehicleDto> batch) {
+	private boolean moveBatch(Id<Link> linkId, List<MoveVehicleDto> batch) {
 		Id<Node> toNodeId = this.netsimEngine.getNetsimNetwork().getNetsimLinks().get(linkId).getToNode().getNode().getId();
 		Integer workerId = netsimEngine.getQSim().getNodesWorkerIds().get(toNodeId);
 		if (workerId.equals(this.netsimEngine.getQSim().getWorkerId())) {
-			acceptVehicles(batch, true);
+			return acceptVehicles(batch, true).size() == batch.size();
 		} else {
 			List<AcceptedVehiclesDto> accepted = netsimEngine.getQSim().getWorkerDelegate().update(workerId, batch, now);
 			handleAccepted(accepted);
+			return accepted.size() == batch.size();
 		}
 	}
 
