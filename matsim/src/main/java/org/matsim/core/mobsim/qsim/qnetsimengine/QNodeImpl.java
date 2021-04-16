@@ -269,7 +269,7 @@ final class QNodeImpl extends AbstractQNode {
 		buffer.poll();
 		MobsimDriverAgent driver = veh.getDriver();
 		Id<Node> toNodeId = this.netsimEngine.getNetsimNetwork().getNetsimLinks().get(nextLinkId).getToNode().getNode().getId();
-		return new MoveVehicleDto(node.getId(), toNodeId, fromLink.getLink().getId(), fromLane.getId(), veh.getId(), driver.getId(), driver.getLinkIndex(), driver.getPlanIndex(), nextLinkId);
+		return new MoveVehicleDto(node.getId(), toNodeId, fromLink.getLink().getId(), fromLane.getId(), veh.getId(), driver.getId(), driver.getLinkIndex(), driver.getPlanIndex(), nextLinkId, netsimEngine.getQSim().getSimTimer().getTimeOfDay());
 	}
 
 	private boolean myMoveVehicleOverNode( final QVehicle veh, QLinkI fromLink, final QLaneI fromLane, final double now ) {
@@ -325,7 +325,7 @@ final class QNodeImpl extends AbstractQNode {
 				MobsimDriverAgent driver = veh.getDriver();
 				Id<Link> nextLinkId = driver.chooseNextLinkId();
 				Id<Node> toNodeId = this.netsimEngine.getNetsimNetwork().getNetsimLinks().get(nextLinkId).getToNode().getNode().getId();
-				MoveVehicleDto moveVehicleDto = new MoveVehicleDto(node.getId(), toNodeId, link.getLink().getId(), lane.getId(), veh.getId(), driver.getId(), driver.getLinkIndex(), driver.getPlanIndex(), nextLinkId);
+				MoveVehicleDto moveVehicleDto = new MoveVehicleDto(node.getId(), toNodeId, link.getLink().getId(), lane.getId(), veh.getId(), driver.getId(), driver.getLinkIndex(), driver.getPlanIndex(), nextLinkId, netsimEngine.getQSim().getSimTimer().getTimeOfDay());
 				moveVehicleDtos.add(moveVehicleDto);
 			}
 		}

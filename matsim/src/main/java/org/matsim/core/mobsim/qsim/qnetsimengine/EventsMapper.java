@@ -3,6 +3,7 @@ package org.matsim.core.mobsim.qsim.qnetsimengine;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.*;
+import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.api.experimental.events.TeleportationArrivalEvent;
 import org.matsim.facilities.ActivityFacility;
 
@@ -108,7 +109,7 @@ public class EventsMapper {
             case PersonStuckEvent.EVENT_TYPE:
                 event = new PersonStuckEvent(eventDto.getTime(),
                         Id.createPersonId(attributes.get(PersonStuckEvent.ATTRIBUTE_PERSON)),
-                        Id.createLinkId(attributes.get(PersonStuckEvent.ATTRIBUTE_LINK)),
+                        idOrNull(attributes.get(PersonStuckEvent.ATTRIBUTE_LINK), Link.class),
                         attributes.get(PersonStuckEvent.ATTRIBUTE_LEGMODE));
                 break;
 

@@ -24,7 +24,9 @@ public interface WorkerDelegate {
 
     void initialize();
 
-    void sendFinished();
+    boolean mobsimFinished();
+
+    void sendFinished(boolean finished);
 
     void movingNodesFinished();
 
@@ -43,4 +45,6 @@ public interface WorkerDelegate {
     void sendFinishEventsProcessing();
 
     void sendAfterMobsim();
+
+    void sendAfterSimStep(double time);
 }

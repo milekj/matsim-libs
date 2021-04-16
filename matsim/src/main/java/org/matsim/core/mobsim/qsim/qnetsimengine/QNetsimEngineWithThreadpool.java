@@ -101,7 +101,8 @@ final class QNetsimEngineWithThreadpool extends AbstractQNetsimEngine<QNetsimEng
 
 
 			WorkerDelegate workerDelegate = getQSim().getWorkerDelegate();
-			workerDelegate.sendFinished();
+			boolean finished = workerDelegate.mobsimFinished();
+			workerDelegate.sendFinished(finished);
 			workerDelegate.waitForUpdates();
 
 			for (AbstractQNetsimEngineRunner engine : this.getQnetsimEngineRunner()) {
@@ -109,6 +110,13 @@ final class QNetsimEngineWithThreadpool extends AbstractQNetsimEngine<QNetsimEng
 			}
 			for (Future<Boolean> future : pool.invokeAll(this.getQnetsimEngineRunner())) {
 				future.get();
+			}
+
+			double now = getQSim().getSimTimer().getTimeOfDay();
+			getQSim().getEventsManager().afterSimStep(now);
+			getQSim().getListenerManager().fireQueueSimulationAfterSimStepEvent(now);
+			if (!finished) {
+				getQSim().getSimTimer().incrementTime();
 			}
 
 			workerDelegate.initializeForNextStep();

@@ -14,3 +14,5 @@ case class Events(events: Seq[EventDto], sender: ActorRef[WorkerCommand]) extend
 case class FinishEventsProcessing() extends MasterCommand
 
 case class AfterMobsim() extends MasterCommand
+
+case class AfterSimStep(now: Double) extends MasterCommand

@@ -11,7 +11,7 @@ import org.mjanowski.worker.{AssignNodes, WorkerCommand}
 import org.mjanowski.{NetworkPartitioner, Partition}
 
 import scala.collection.mutable
-import scala.jdk.CollectionConverters.{CollectionHasAsScala, MapHasAsScala}
+import scala.jdk.CollectionConverters.{CollectionHasAsScala, MapHasAsScala, SeqHasAsJava}
 
 object SimMasterActor {
 
@@ -19,7 +19,7 @@ object SimMasterActor {
   private var partitions: mutable.Map[Int, Partition] = _
   private val workers = mutable.Map[Int, ActorRef[WorkerCommand]]()
   private var workersNumber: Int = _
-  private var eventsManager: EventsManager = _
+  private var eventsManager: MasterEventsManager = _
 
   def apply(workersNumber: Int, network: Network, masterSim: MasterSim): Behavior[MasterCommand] = {
     SimMasterActor.workersNumber = workersNumber
@@ -46,12 +46,24 @@ object SimMasterActor {
           Behaviors.same
 
         case Events(events, sender) =>
-          println(events.size)
-          events.map(e => EventsMapper.map(e))
-            .foreach(e => {
-              Logger.getRootLogger.info(e + "\n " + sender)
-              eventsManager.processEvent(e)
-            })
+//          println(events.size)
+
+          //todo just checking for debug
+
+          val times = events.map(e => e.getTime).distinct
+
+          if (events.map(e => e.getTime).distinct.size > 1)
+            Logger.getRootLogger.error("Multiple event times in a batch!!!" + times)
+
+
+//          Logger.getRootLogger.info("Sender " + sender)
+//          events.foreach(e => {Logger.getRootLogger.info(e)})
+          eventsManager.processBatch(events.asJava)
+//          events.map(e => EventsMapper.map(e))
+//            .foreach(e => {
+////              Logger.getRootLogger.info(e + "\n " + sender)
+//              eventsManager.processEvent(e)
+//            })
           Behaviors.same
 
         case FinishEventsProcessing() =>
@@ -61,6 +73,12 @@ object SimMasterActor {
         case AfterMobsim() =>
           masterSim.afterMobsim()
           Behaviors.same
+
+        case AfterSimStep(now) =>
+//          Logger.getRootLogger.info("After simstep " + now)
+          eventsManager.workerAfterSimStep(now);
+          Behaviors.same
+
       }
     })
   }

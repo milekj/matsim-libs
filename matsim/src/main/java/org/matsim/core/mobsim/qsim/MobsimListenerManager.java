@@ -32,7 +32,7 @@ import org.matsim.core.utils.misc.ClassUtils;
 
 import javax.swing.event.EventListenerList;
 
-class MobsimListenerManager implements MatsimManager {
+public class MobsimListenerManager implements MatsimManager {
 
 	private final static Logger log = Logger.getLogger(MobsimListenerManager.class);
 

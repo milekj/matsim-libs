@@ -454,16 +454,13 @@ public final class QSim extends Thread implements VisMobsim, Netsim, ActivityEnd
 
 //		boolean doContinue =  (this.agentCounter.isLiving() && (this.stopTime > now));
 		boolean doContinue =  shouldFinish;
-		this.events.afterSimStep(now);
-		this.listenerManager.fireQueueSimulationAfterSimStepEvent(now);
+
+
+		//muszę to przenieść żeby nie rozjechał się czas między workerami
 
 		final QSimConfigGroup qsimConfigGroup = this.scenario.getConfig().qsim();
 		if ( qsimConfigGroup.getSimEndtimeInterpretation()==EndtimeInterpretation.onlyUseEndtime ) {
 			doContinue = now <= qsimConfigGroup.getEndTime().seconds();
-		}
-
-		if (doContinue) {
-			this.simTimer.incrementTime();
 		}
 		
 		if (analyzeRunTimes) this.qSimInternalTime += System.nanoTime() - this.startClockTime;
@@ -623,6 +620,7 @@ public final class QSim extends Thread implements VisMobsim, Netsim, ActivityEnd
 			log.info("SIMULATION (NEW QSim) AT " + Time.writeTime(time)
 					+ " : #Veh=" + this.agentCounter.getLiving() + " lost="
 					+ this.agentCounter.getLost() + " simT=" + diffsim
+					+ " simTime= " + time
 					+ "s realT=" + (diffreal) + "s; (s/r): "
 					+ (diffsim / (diffreal + Double.MIN_VALUE)));
 		}
@@ -635,6 +633,10 @@ public final class QSim extends Thread implements VisMobsim, Netsim, ActivityEnd
 	@Override
 	public EventsManager getEventsManager() {
 		return events;
+	}
+
+	public MobsimListenerManager getListenerManager() {
+		return listenerManager;
 	}
 
 	@Override

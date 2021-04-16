@@ -1,7 +1,6 @@
 package org.mjanowski.worker;
 
 import com.google.inject.Inject;
-import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Node;
@@ -17,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class WorkerDelegateImpl implements WorkerDelegate {
 
@@ -66,13 +64,18 @@ public class WorkerDelegateImpl implements WorkerDelegate {
     }
 
     @Override
-    public void sendFinished() {
+    public boolean mobsimFinished() {
+        return !workerSim.getAgentCounter().isLiving() || workerSim.getStopTime() <= workerSim.getSimTimer().getTimeOfDay();
+    }
+
+    @Override
+    public void sendFinished(boolean finished) {
+        this.finished = finished;
         //todo potrzebne tutaj usprawnienie w przypadku gdy długo czekamy i nie ma poruszających się pojazdów?
-        finished =  !workerSim.getAgentCounter().isLiving() || workerSim.getStopTime() <= workerSim.getSimTimer().getTimeOfDay();
 //        Logger.getRootLogger().info("agents: " + workerSim.getAgentCounter().getLiving());
 //        Logger.getRootLogger().info("stop time: " + workerSim.getStopTime());
 //        Logger.getRootLogger().info("now: " + workerSim.getSimTimer().getTimeOfDay());
-        allFinished = new AtomicBoolean(finished);
+        allFinished = new AtomicBoolean(this.finished);
         canStartNextStep = new CountDownLatch(workerSim.getWorkerNodesIds().size() - 1);
         workerMain.sendFinished();
     }
@@ -147,6 +150,11 @@ public class WorkerDelegateImpl implements WorkerDelegate {
     @Override
     public void sendAfterMobsim() {
         workerMain.sendAfterMobsim();
+    }
+
+    @Override
+    public void sendAfterSimStep(double time) {
+        workerMain.sendAfterSimStep(time);
     }
 
 }

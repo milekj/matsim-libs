@@ -129,7 +129,7 @@ public final class MasterSim implements Netsim {
 	// "run" method:
 
 	public void run() {
-
+		Logger.getLogger("Master Sim run");
 		MySimConfig mySimConfig = (MySimConfig) scenario.getConfig().getModules().get("mySimConfig");
 		int workersNumber = mySimConfig.getWorkersNumber();
 		iterationEndedLatch = new CountDownLatch(workersNumber);
@@ -147,8 +147,8 @@ public final class MasterSim implements Netsim {
 	}
 
 	@Override
-	public EventsManager getEventsManager() {
-		return events;
+	public MasterEventsManager getEventsManager() {
+		return (MasterEventsManager) events;
 	}
 
 	@Override
@@ -156,7 +156,6 @@ public final class MasterSim implements Netsim {
 		return null;
 		//todo ???
 	}
-
 
 	@Override
 	public Scenario getScenario() {

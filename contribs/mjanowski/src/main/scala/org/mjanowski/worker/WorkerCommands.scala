@@ -42,3 +42,5 @@ case class SendEvents(events: Seq[EventDto]) extends WorkerCommand
 case class SendFinishEventsProcessing() extends WorkerCommand
 
 case class SendAfterMobsim() extends WorkerCommand
+
+case class SendAfterSimStep(now: Double) extends WorkerCommand

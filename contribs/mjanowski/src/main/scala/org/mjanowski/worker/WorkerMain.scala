@@ -76,4 +76,8 @@ class WorkerMain(config: MySimConfig, workerSim: WorkerSim) {
     actorSystem ! SendAfterMobsim()
   }
 
+  def sendAfterSimStep(now: Double): Unit = {
+    actorSystem ! SendAfterSimStep(now)
+  }
+
 }

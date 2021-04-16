@@ -12,6 +12,9 @@ import org.matsim.vehicles.Vehicle;
 
 public class MoveVehicleDto {
 
+    //tmp
+    private double time;
+
     private Id<Node> fromNodeId;
     private Id<Node> toNodeId;
     private Id<Link> fromLinkId;
@@ -23,7 +26,7 @@ public class MoveVehicleDto {
     private Id<Link> toLinkId;
     private boolean aborted;
 
-    public MoveVehicleDto(Id<Node> fromNodeId, Id<Node> toNodeId, Id<Link> fromLinkId, Id<Lane> fromLaneId, Id<Vehicle> vehicleId, Id<Person> personId, int personLinkIndex, int planIndex, Id<Link> toLinkId) {
+    public MoveVehicleDto(Id<Node> fromNodeId, Id<Node> toNodeId, Id<Link> fromLinkId, Id<Lane> fromLaneId, Id<Vehicle> vehicleId, Id<Person> personId, int personLinkIndex, int planIndex, Id<Link> toLinkId, double time) {
         this.fromNodeId = fromNodeId;
         this.toNodeId = toNodeId;
         this.fromLinkId = fromLinkId;
@@ -33,6 +36,7 @@ public class MoveVehicleDto {
         this.personLinkIndex = personLinkIndex;
         this.planIndex = planIndex;
         this.toLinkId = toLinkId;
+        this.time = time;
     }
 
     public static MoveVehicleDto aborted() {
@@ -51,7 +55,8 @@ public class MoveVehicleDto {
     @Override
     public String toString() {
         return "MoveVehicleDto{" +
-                "fromNodeId=" + fromNodeId +
+                "time=" + time +
+                ", fromNodeId=" + fromNodeId +
                 ", toNodeId=" + toNodeId +
                 ", fromLinkId=" + fromLinkId +
                 ", fromLaneId=" + fromLaneId +

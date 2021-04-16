@@ -7,7 +7,7 @@ import akka.actor.typed.{ActorRef, Behavior, LogOptions}
 import akka.event.Logging.LogLevel
 import org.matsim.api.core.v01.Id
 import org.matsim.api.core.v01.network.{Link, Node}
-import org.mjanowski.master.{AfterMobsim, Events, FinishEventsProcessing, MasterCommand, RegisterWorker, SimMasterActor}
+import org.mjanowski.master.{AfterMobsim, AfterSimStep, Events, FinishEventsProcessing, MasterCommand, RegisterWorker, SimMasterActor}
 import org.mjanowski.worker.SimWorkerActor.workerSim
 
 import java.util
@@ -103,6 +103,10 @@ object SimWorkerActor {
 
         case SendAfterMobsim() =>
           master ! AfterMobsim()
+          Behaviors.same
+
+        case SendAfterSimStep(now) =>
+          master ! AfterSimStep(now)
           Behaviors.same
 
 
