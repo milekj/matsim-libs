@@ -76,6 +76,7 @@ public class WorkerQSimModule extends AbstractModule {
 	
 	@Override
 	public void install() {
+		bind(QSimProvider.class).asEagerSingleton();
 		install(new QSimComponentsModule());
 		// this is essentially a structured collection of strings that determines which QSimModules will later be used.  Can be
 		// used to configure from config, but maybe easiest just ignore when getting started with this.  The default QSimModules
@@ -97,12 +98,6 @@ public class WorkerQSimModule extends AbstractModule {
 				new TypeLiteral<Collection<AbstractQSimModule>>() {}
 		).to(new TypeLiteral<Set<AbstractQSimModule>>() {});
 		// I don't know why this is here.  kai, nov'18
-
-		bind(Mobsim.class)
-				.annotatedWith(Names.named("QSim"))
-				.toProvider(WorkerQSimProvider.class);
-
-		bind(WorkerDelegateImpl.class).asEagerSingleton();
 		
 		// yyyy the following will eventually be moved to QSim scope, and into QNetsimEngineModule:
 //		if ( config.qsim().isUseLanes() ) {

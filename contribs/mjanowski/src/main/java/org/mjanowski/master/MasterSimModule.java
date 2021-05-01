@@ -24,8 +24,10 @@
 
 import org.matsim.core.config.Config;
 import org.matsim.core.controler.AbstractModule;
+import org.matsim.core.controler.corelisteners.PlansReplanning;
 import org.matsim.core.mobsim.framework.Mobsim;
 import org.matsim.core.mobsim.qsim.*;
+import org.mjanowski.worker.WorkerDelegateImpl;
 
 import javax.inject.Inject;
 
@@ -67,7 +69,9 @@ public class MasterSimModule extends AbstractModule {
 	
 	@Override
 	public void install() {
-		bind(Mobsim.class).to(MasterSim.class);
+		bind(Mobsim.class).to(MasterSim.class).asEagerSingleton();
+		bind(MasterDelegate.class).to(MasterDelegateImpl.class).asEagerSingleton();
+
 //		bind(Mobsim.class).toProvider(MasterSimProvider.class);
 		
 		// yyyy the following will eventually be moved to QSim scope, and into QNetsimEngineModule:

@@ -28,6 +28,7 @@ import org.matsim.core.api.internal.MatsimManager;
 import org.matsim.core.config.groups.ControlerConfigGroup;
 import org.matsim.core.config.groups.PlansConfigGroup;
 import org.matsim.core.config.groups.StrategyConfigGroup;
+import org.matsim.core.mobsim.qsim.qnetsimengine.ReplanningDto;
 import org.matsim.core.replanning.selectors.PlanSelector;
 import org.matsim.core.replanning.selectors.WorstPlanForRemovalSelector;
 
@@ -166,11 +167,12 @@ public class StrategyManager implements MatsimManager {
 	 * requests for the specified iteration.
 	 *
 	 * @param iteration the current iteration we're handling
+	 * @return
 	 */
-	public final void run(final Population population, final int iteration, final ReplanningContext replanningContext) {
+	public final List<ReplanningDto> run(final Population population, final int iteration, final ReplanningContext replanningContext) {
 		// (this is not directly delegated since the run method of this StrategyManager includes two "hooks").
 		delegate.handleChangeRequests(iteration);
-		run(population, replanningContext);
+		return run(population, replanningContext);
 	}
 
 	/**
@@ -185,11 +187,13 @@ public class StrategyManager implements MatsimManager {
 	 * Randomly chooses for each person of the population a strategy and uses that
 	 * strategy on the person.
 	 *
+	 * @return
 	 */
-	public final void run(final Population population, final ReplanningContext replanningContext) {
+	public final List<ReplanningDto> run(final Population population, final ReplanningContext replanningContext) {
 		beforePopulationRunHook(population, replanningContext);
-		delegate.run(population.getPersons().values(), population, replanningContext);
+		List<ReplanningDto> result = delegate.run(population.getPersons().values(), population, replanningContext);
 		afterRunHook(population);
+		return result;
 	}
 
 	/**

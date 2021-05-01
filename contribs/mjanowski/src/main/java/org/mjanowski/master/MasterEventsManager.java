@@ -18,9 +18,10 @@ import java.util.stream.Collectors;
 
 public class MasterEventsManager implements EventsManager {
 
-    BlockingQueue<Double> stepsQueue = new LinkedBlockingQueue<>();
-    Map<Double, CountDownLatch> stepFinishedLatches = new ConcurrentHashMap<>();
-    Map<Double, Queue<Event>> eventsQueues = new HashMap<>();
+    private final Runnable processingRunnable;
+    BlockingQueue<Double> stepsQueue;
+    Map<Double, CountDownLatch> stepFinishedLatches;
+    Map<Double, Queue<Event>> eventsQueues;
     private final int workersNumber;
     private Thread processingThread;
 
@@ -35,8 +36,7 @@ public class MasterEventsManager implements EventsManager {
                 ? eventHandlingConfig.getNumberOfThreads() : 2;
 
         delegate = new ParallelEventsManagerImpl(threadsNumber);
-
-        processingThread = new Thread(() -> {
+        processingRunnable = () -> {
             Logger.getRootLogger().info("Events thread started");
             while (!Thread.currentThread().isInterrupted()) {
 //                Logger.getRootLogger().info("Events thread loop");
@@ -56,6 +56,7 @@ public class MasterEventsManager implements EventsManager {
                         continue;
                     }
                     events.forEach(e -> delegate.processEvent(e));
+                    eventsQueues.put(step, null);
 //                    Logger.getRootLogger().info("Events thread in step processed " + step);
                 } catch (InterruptedException e) {
 //                    Logger.getRootLogger().info("Events thread interrupted");
@@ -63,7 +64,7 @@ public class MasterEventsManager implements EventsManager {
                 }
             }
             Logger.getRootLogger().info("Events thread finished processing");
-        });
+        };
     }
 
     public void workerAfterSimStep(double step) {
@@ -113,9 +114,18 @@ public class MasterEventsManager implements EventsManager {
 
     @Override
     public void initProcessing() {
+        System.out.println("Trying to init processing");
+        System.out.println(Arrays.toString(Thread.currentThread().getStackTrace()));
+        if (processingThread != null)
+            return;
+        System.out.println("Not already init");
         Logger.getRootLogger().info("Events processing started");
-        processingThread.start();
         delegate.initProcessing();
+        stepsQueue = new LinkedBlockingQueue<>();
+        stepFinishedLatches = new ConcurrentHashMap<>();
+        eventsQueues = new HashMap<>();
+        processingThread = new Thread(processingRunnable);
+        processingThread.start();
     }
 
     @Override
@@ -125,7 +135,46 @@ public class MasterEventsManager implements EventsManager {
 
     @Override
     public void finishProcessing() {
+        System.out.println("finishing processing");
+        if (processingThread == null) {
+            System.out.println("already finished");
+            return;
+        }
         processingThread.interrupt();
+        try {
+            processingThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        while (!stepsQueue.isEmpty()) {
+            try {
+                Double step = stepsQueue.take();
+                System.out.println("Finishing for step: " + step);
+                if (step % 1000 == 0)
+                    Logger.getRootLogger().info("Processing events from step " + step);
+                CountDownLatch stepLatch = stepFinishedLatches.get(step);
+                stepLatch.await();
+                Queue<Event> events = eventsQueues.get(step);
+                if (events == null) {
+                    continue;
+                }
+                events.forEach(e -> delegate.processEvent(e));
+                eventsQueues.put(step, null);
+            } catch (InterruptedException e) {
+                Logger.getRootLogger().error("interrupted - should not happen");
+            }
+        }
+
+        List<Double> nonNull = eventsQueues.entrySet()
+                .stream()
+                .filter(e -> e.getValue() != null)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        System.out.println("Remaining events = " + nonNull);
+
+        processingThread = null;
         delegate.finishProcessing();
     }
 }

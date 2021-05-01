@@ -22,7 +22,9 @@ public interface WorkerDelegate {
 
     void accepted(Integer workerId, Map<Id<Node>, Collection<List<AcceptedVehiclesDto>>> accepted);
 
-    void initialize();
+    void beforeIteration();
+
+    void initializeForNextIteration();
 
     boolean mobsimFinished();
 
@@ -42,9 +44,11 @@ public interface WorkerDelegate {
 
     void sendEvents(List<EventDto> eventDtos);
 
-    void sendFinishEventsProcessing();
-
     void sendAfterMobsim();
 
     void sendAfterSimStep(double time);
+
+    void readyForNextIteration();
+
+    void waitUntilReadyForIteration();
 }

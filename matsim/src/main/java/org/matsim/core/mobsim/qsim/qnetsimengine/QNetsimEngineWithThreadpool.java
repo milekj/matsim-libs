@@ -59,6 +59,7 @@ final class QNetsimEngineWithThreadpool extends AbstractQNetsimEngine<QNetsimEng
 	@Override
 	public void finishMultiThreading() {
 		this.pool.shutdown();
+		initialized = new CountDownLatch(1);
 	}
 
 	protected void run(double time) {
@@ -115,9 +116,12 @@ final class QNetsimEngineWithThreadpool extends AbstractQNetsimEngine<QNetsimEng
 			double now = getQSim().getSimTimer().getTimeOfDay();
 			getQSim().getEventsManager().afterSimStep(now);
 			getQSim().getListenerManager().fireQueueSimulationAfterSimStepEvent(now);
-			if (!finished) {
-				getQSim().getSimTimer().incrementTime();
-			}
+			getQSim().getSimTimer().incrementTime();
+
+//			Nie pamiętam czemu tak było
+//			if (!finished) {
+//				getQSim().getSimTimer().incrementTime();
+//			}
 
 			workerDelegate.initializeForNextStep();
 			workerDelegate.sendReadyForNextStep();

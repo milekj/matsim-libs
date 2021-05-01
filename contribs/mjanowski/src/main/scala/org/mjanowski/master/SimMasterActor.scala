@@ -6,8 +6,9 @@ import akka.actor.typed.{ActorRef, Behavior}
 import org.apache.log4j.Logger
 import org.matsim.api.core.v01.network.Network
 import org.matsim.core.api.experimental.events.EventsManager
+import org.matsim.core.mobsim.qsim.MasterDelegate
 import org.matsim.core.mobsim.qsim.qnetsimengine.EventsMapper
-import org.mjanowski.worker.{AssignNodes, WorkerCommand}
+import org.mjanowski.worker.{AssignNodes, Replanning, WorkerCommand}
 import org.mjanowski.{NetworkPartitioner, Partition}
 
 import scala.collection.mutable
@@ -19,11 +20,11 @@ object SimMasterActor {
   private var partitions: mutable.Map[Int, Partition] = _
   private val workers = mutable.Map[Int, ActorRef[WorkerCommand]]()
   private var workersNumber: Int = _
-  private var eventsManager: MasterEventsManager = _
+  private var masterDelegate: MasterDelegate = _
 
-  def apply(workersNumber: Int, network: Network, masterSim: MasterSim): Behavior[MasterCommand] = {
+  def apply(workersNumber: Int, network: Network, masterDelegate: MasterDelegate): Behavior[MasterCommand] = {
     SimMasterActor.workersNumber = workersNumber
-    SimMasterActor.eventsManager = masterSim.getEventsManager
+    SimMasterActor.masterDelegate = masterDelegate
     val partitioner = new NetworkPartitioner(network)
     partitions = partitioner.partition(workersNumber)
       .asScala
@@ -58,7 +59,7 @@ object SimMasterActor {
 
 //          Logger.getRootLogger.info("Sender " + sender)
 //          events.foreach(e => {Logger.getRootLogger.info(e)})
-          eventsManager.processBatch(events.asJava)
+          SimMasterActor.masterDelegate.processBatch(events.asJava)
 //          events.map(e => EventsMapper.map(e))
 //            .foreach(e => {
 ////              Logger.getRootLogger.info(e + "\n " + sender)
@@ -66,17 +67,18 @@ object SimMasterActor {
 //            })
           Behaviors.same
 
-        case FinishEventsProcessing() =>
-          eventsManager.finishProcessing();
-          Behaviors.same
-
         case AfterMobsim() =>
-          masterSim.afterMobsim()
+          println("Received after mobsim")
+          SimMasterActor.masterDelegate.afterMobsim()
           Behaviors.same
 
         case AfterSimStep(now) =>
 //          Logger.getRootLogger.info("After simstep " + now)
-          eventsManager.workerAfterSimStep(now);
+          SimMasterActor.masterDelegate.workerAfterSimStep(now);
+          Behaviors.same
+
+        case SendReplanning(replanningDtos, last) =>
+          workers.values.foreach(w => w ! Replanning(replanningDtos, last))
           Behaviors.same
 
       }

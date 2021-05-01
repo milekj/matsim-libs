@@ -22,46 +22,20 @@ package org.mjanowski.master;
 
 import com.google.inject.Injector;
 import org.apache.log4j.Logger;
-import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.IdMap;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.events.PersonDepartureEvent;
-import org.matsim.api.core.v01.events.PersonStuckEvent;
-import org.matsim.api.core.v01.network.Link;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.api.experimental.events.EventsManager;
-import org.matsim.core.config.Config;
-import org.matsim.core.config.groups.QSimConfigGroup;
-import org.matsim.core.config.groups.QSimConfigGroup.EndtimeInterpretation;
-import org.matsim.core.events.EventsUtils;
-import org.matsim.core.gbl.Gbl;
-import org.matsim.core.mobsim.framework.AgentSource;
-import org.matsim.core.mobsim.framework.HasPerson;
-import org.matsim.core.mobsim.framework.MobsimAgent;
+import org.matsim.core.controler.ControlerListenerManager;
+import org.matsim.core.controler.listener.ReplanningListener;
+import org.matsim.core.controler.listener.ShutdownListener;
 import org.matsim.core.mobsim.framework.MobsimTimer;
 import org.matsim.core.mobsim.framework.listeners.MobsimListener;
-import org.matsim.core.mobsim.qsim.ActivityEngine;
-import org.matsim.core.mobsim.qsim.AgentTracker;
-import org.matsim.core.mobsim.qsim.HasAgentTracker;
-import org.matsim.core.mobsim.qsim.changeeventsengine.NetworkChangeEventsEngineI;
+import org.matsim.core.mobsim.qsim.MasterDelegate;
 import org.matsim.core.mobsim.qsim.interfaces.*;
-import org.matsim.core.mobsim.qsim.qnetsimengine.NetsimEngine;
-import org.matsim.core.mobsim.qsim.qnetsimengine.QNetsimEngineI;
-import org.matsim.core.network.NetworkChangeEvent;
-import org.matsim.core.population.PopulationUtils;
-import org.matsim.vehicles.Vehicle;
-import org.matsim.vehicles.VehicleType;
-import org.matsim.vehicles.VehicleUtils;
-import org.matsim.vehicles.Vehicles;
-import org.matsim.withinday.mobsim.WithinDayEngine;
 import org.mjanowski.MySimConfig;
 
 import javax.inject.Inject;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This has developed over the last couple of months/years towards an increasingly pluggable module.  The current (dec'2011)
@@ -96,13 +70,12 @@ public final class MasterSim implements Netsim {
 	final private static Logger log = Logger.getLogger(MasterSim.class);
 
 	private final EventsManager events;
+	private ControlerListenerManager controlerListenerManager;
 	private final MobsimTimer simTimer;
 	private final MasterSimListenerManager listenerManager;
 	private final Scenario scenario;
+	private MasterDelegate masterDelegate;
 	private CountDownLatch iterationEndedLatch;
-	private MasterMain masterMain;
-
-
 
 	/**
 	 * Constructs an instance of this simulation which does not do anything by itself, but accepts handlers for Activities and Legs.
@@ -113,11 +86,26 @@ public final class MasterSim implements Netsim {
 	 *
 	 */
 	@Inject
-	private MasterSim(final Scenario sc, EventsManager events, Injector childInjector ) {
+	private MasterSim(final Scenario sc,
+					  EventsManager events,
+					  Injector childInjector,
+					  ControlerListenerManager controlerListenerManager) {
 		this.scenario = sc;
 		this.events = events;
+		this.controlerListenerManager = controlerListenerManager;
 		this.listenerManager = new MasterSimListenerManager(this);
 		this.simTimer = new MobsimTimer( sc.getConfig().qsim().getTimeStepSize());
+		controlerListenerManager.addControlerListener(
+				(ShutdownListener) event -> {
+					masterDelegate.terminateSystem();
+					events.finishProcessing();
+				}
+		);
+		controlerListenerManager.addControlerListener(
+				(ReplanningListener) event -> {
+					events.initProcessing();
+				}
+		);
 	}
 
 	@Override
@@ -129,21 +117,21 @@ public final class MasterSim implements Netsim {
 	// "run" method:
 
 	public void run() {
-		Logger.getLogger("Master Sim run");
+		System.out.println("mastersim run");
+//		getEventsManager().initProcessing();
+		//???
 		MySimConfig mySimConfig = (MySimConfig) scenario.getConfig().getModules().get("mySimConfig");
-		int workersNumber = mySimConfig.getWorkersNumber();
-		iterationEndedLatch = new CountDownLatch(workersNumber);
-		events.initProcessing();
-		masterMain = new MasterMain(mySimConfig, scenario.getNetwork(), this);
+		iterationEndedLatch = new CountDownLatch(mySimConfig.getWorkersNumber());
 		try {
 			iterationEndedLatch.await();
+			events.finishProcessing();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 	}
 
-	public void afterMobsim() {
-		iterationEndedLatch.countDown();
+	public void setMasterDelegate(MasterDelegate masterDelegate) {
+		this.masterDelegate = masterDelegate;
 	}
 
 	@Override
@@ -182,5 +170,10 @@ public final class MasterSim implements Netsim {
 	@Override
 	public double getStopTime() {
 		return 0;
+	}
+
+	public void afterMobsim() {
+		System.out.println("Iteration ended latch countdown");
+		iterationEndedLatch.countDown();
 	}
 }

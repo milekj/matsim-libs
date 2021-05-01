@@ -26,10 +26,13 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
+import org.matsim.api.core.v01.population.PlanElement;
+import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.controler.ControlerListenerManager;
-import org.matsim.core.controler.events.AfterMobsimEvent;
 import org.matsim.core.controler.listener.AfterMobsimListener;
+import org.matsim.core.controler.listener.ShutdownListener;
 import org.matsim.core.mobsim.framework.Mobsim;
 import org.matsim.core.mobsim.framework.MobsimAgent;
 import org.matsim.core.mobsim.framework.MobsimTimer;
@@ -37,19 +40,23 @@ import org.matsim.core.mobsim.framework.listeners.MobsimListener;
 import org.matsim.core.mobsim.qsim.ActivityEndRescheduler;
 import org.matsim.core.mobsim.qsim.QSim;
 import org.matsim.core.mobsim.qsim.WorkerDelegate;
+import org.matsim.core.mobsim.qsim.agents.BasicPlanAgentImpl;
+import org.matsim.core.mobsim.qsim.agents.PersonDriverAgentImpl;
 import org.matsim.core.mobsim.qsim.interfaces.AgentCounter;
 import org.matsim.core.mobsim.qsim.interfaces.Netsim;
 import org.matsim.core.mobsim.qsim.interfaces.NetsimNetwork;
-import org.matsim.core.mobsim.qsim.qnetsimengine.AcceptedVehiclesDto;
-import org.matsim.core.mobsim.qsim.qnetsimengine.MoveVehicleDto;
+import org.matsim.core.mobsim.qsim.qnetsimengine.*;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.vis.snapshotwriters.VisData;
 import org.matsim.vis.snapshotwriters.VisMobsim;
 import org.matsim.vis.snapshotwriters.VisNetwork;
 
 import javax.inject.Inject;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * This has developed over the last couple of months/years towards an increasingly pluggable module.  The current (dec'2011)
@@ -82,7 +89,8 @@ import java.util.Set;
 public final class WorkerSim extends Thread implements VisMobsim, Netsim, ActivityEndRescheduler {
 
 	final private static Logger log = Logger.getLogger(WorkerSim.class);
-	private final QSim qSim;
+	private QSim qSim;
+	private Population population;
 	private WorkerDelegate workerDelegate;
 	private Scenario scenario;
 
@@ -93,17 +101,29 @@ public final class WorkerSim extends Thread implements VisMobsim, Netsim, Activi
 	private WorkerSim(final Scenario sc,
 					  EventsManager events,
 					  ControlerListenerManager controlerListenerManager,
-					  @Named("QSim") Mobsim qSim) {
+					  Population population) {
 		scenario = sc;
-		this.qSim = ((QSim) qSim);
+		this.population = population;
 		controlerListenerManager.addControlerListener(
-				(AfterMobsimListener) event -> workerDelegate.sendAfterMobsim()
+				(AfterMobsimListener) event -> {
+					workerDelegate.initializeForNextIteration();
+					workerDelegate.sendAfterMobsim();
+				}
 		);
+		controlerListenerManager.addControlerListener(
+				(ShutdownListener) event -> {
+					workerDelegate.terminateSystem();
+				}
+		);
+	}
+
+	public void setQsim(QSim qsim) {
+		this.qSim = qsim;
+		this.qSim.setWorkerDelegate(workerDelegate);
 	}
 
 	public void setWorkerDelegate(WorkerDelegate workerDelegate) {
 		this.workerDelegate = workerDelegate;
-		this.qSim.setWorkerDelegate(workerDelegate);
 	}
 
 	public void setWorkerId(int workerId) {
@@ -122,22 +142,18 @@ public final class WorkerSim extends Thread implements VisMobsim, Netsim, Activi
 	public void runIteration() {
 		qSim.setWorkerNodesIds(workerNodesIds);
 		qSim.setWorkerId(workerId);
-		workerDelegate.initialize();
+		workerDelegate.beforeIteration();
 		new Thread(() -> {
-			qSim.start();
-			try {
-				qSim.join();
-				synchronized (this) {
-					this.notify();
-				}
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+			qSim.run();
+			synchronized (this) {
+				this.notify();
 			}
 		}).start();
 	}
 
 	@Override
 	public void run() {
+		workerDelegate.waitUntilReadyForIteration();
 		workerDelegate.startIteration();
 		try {
 			synchronized (this) {
@@ -146,7 +162,8 @@ public final class WorkerSim extends Thread implements VisMobsim, Netsim, Activi
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		workerDelegate.terminateSystem();
+		//todo to gdzieś indziej...!!!!
+		//		workerDelegate.terminateSystem();
 	}
 
 	public List<AcceptedVehiclesDto> acceptVehicles(int workerId, List<MoveVehicleDto> moveVehicleDtos) {
@@ -215,5 +232,34 @@ public final class WorkerSim extends Thread implements VisMobsim, Netsim, Activi
 	@Override
 	public VisData getNonNetworkAgentSnapshots() {
 		return qSim.getNonNetworkAgentSnapshots();
+	}
+
+	public void handleReplanning(List<ReplanningDto> replanningDtos, boolean last) {
+		Map<Id<Person>, ? extends Person> persons = population.getPersons();
+
+		for (ReplanningDto replanningDto : replanningDtos) {
+			Id<Person> personId = replanningDto.getPersonId();
+			Person person = persons.get(personId);
+
+			replanningDto.getPlanId().ifPresentOrElse(
+					person::setSelectedPlan,
+					() -> {
+						PlanDto planDto = replanningDto.getNewPlan().get();
+						Plan plan = PopulationUtils.createPlan();
+						plan.setPerson(person);
+						plan.setType(planDto.getType());
+						plan.setScore(planDto.getScore());
+						ArrayList<PlanElement> planElements = planDto.getActsLegs().stream()
+								.map(PlanElementDto::toPlanElement)
+								.collect(Collectors.toCollection(ArrayList::new));
+						plan.setPlanElements(planElements);
+						person.addPlan(plan);
+						person.setSelectedPlan(plan);
+					}
+			);
+		}
+		if (last) {
+			workerDelegate.readyForNextIteration();
+		}
 	}
 }

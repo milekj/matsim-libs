@@ -22,11 +22,13 @@
  package org.mjanowski.worker;
 
 
+import com.google.inject.Singleton;
 import com.google.inject.name.Names;
 import org.matsim.core.config.Config;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.mobsim.framework.Mobsim;
 import org.matsim.core.mobsim.qsim.QSim;
+import org.matsim.core.mobsim.qsim.WorkerDelegate;
 
 import javax.inject.Inject;
 
@@ -68,7 +70,9 @@ public class WorkerSimModule extends AbstractModule {
 	
 	@Override
 	public void install() {
-		bind(Mobsim.class).to(WorkerSim.class).asEagerSingleton();
+		bind(WorkerDelegate.class).to(WorkerDelegateImpl.class).in(Singleton.class);
+		bind(WorkerSim.class).asEagerSingleton();
+		bind(Mobsim.class).toProvider(WorkerSimProvider.class);
 //		bind(Mobsim.class).toProvider(WorkerSimProvider.class);
 		
 		// yyyy the following will eventually be moved to QSim scope, and into QNetsimEngineModule:

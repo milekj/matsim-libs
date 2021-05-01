@@ -71,10 +71,6 @@ class WorkerMain(config: MySimConfig, workerSim: WorkerSim) {
     actorSystem ! SendEvents(events.asScala.toSeq)
   }
 
-  def sendFinishEventsProcessing(): Unit = {
-    actorSystem ! SendFinishEventsProcessing()
-  }
-
   def sendAfterMobsim(): Unit = {
     actorSystem ! SendAfterMobsim()
   }

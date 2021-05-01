@@ -18,44 +18,44 @@
  *                                                                         *
  * *********************************************************************** */
 
-package org.matsim.core.controler.corelisteners;
-
-import org.matsim.api.core.v01.population.Population;
-import org.matsim.core.controler.events.ReplanningEvent;
-import org.matsim.core.controler.listener.ReplanningListener;
-import org.matsim.core.replanning.ReplanningContext;
-import org.matsim.core.replanning.StrategyManager;
+package org.mjanowski.master;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.matsim.api.core.v01.population.Population;
+import org.matsim.core.controler.corelisteners.PlansReplanning;
+import org.matsim.core.controler.events.ReplanningEvent;
+import org.matsim.core.controler.listener.ReplanningListener;
+import org.matsim.core.mobsim.qsim.MasterDelegate;
+import org.matsim.core.mobsim.qsim.qnetsimengine.ReplanningDto;
+import org.matsim.core.replanning.ReplanningContext;
+import org.matsim.core.replanning.StrategyManager;
 
 import javax.inject.Provider;
+import java.util.List;
 
-/**
- * A {@link org.matsim.core.controler.listener.ControlerListener} that manages the
- * replanning of plans in every iteration. Basically it integrates the
- * {@link org.matsim.core.replanning.StrategyManager} with the
- * {@link org.matsim.core.controler.Controler}.
- *
- * @author mrieser
- */
-@Singleton
-public final class PlansReplanningImpl implements PlansReplanning, ReplanningListener {
+final class MasterPlansReplanningImpl implements PlansReplanning, ReplanningListener {
 
 	private final Provider<ReplanningContext> replanningContextProvider;
+	private MasterDelegate masterDelegate;
 	private Population population;
 	private StrategyManager strategyManager;
-	
+
 	@Inject
-	PlansReplanningImpl(StrategyManager strategyManager, Population pop, Provider<ReplanningContext> replanningContextProvider) {
+    MasterPlansReplanningImpl(StrategyManager strategyManager,
+                              Population pop,
+                              Provider<ReplanningContext> replanningContextProvider,
+                              MasterDelegate masterDelegate) {
 		this.population = pop;
 		this.strategyManager = strategyManager;
 		this.replanningContextProvider = replanningContextProvider;
+		this.masterDelegate = masterDelegate;
 	}
 
 	@Override
 	public void notifyReplanning(final ReplanningEvent event) {
-		strategyManager.run(population, event.getIteration(), replanningContextProvider.get());
+		List<ReplanningDto> replanningDtos = strategyManager.run(population, event.getIteration(), replanningContextProvider.get());
+		masterDelegate.sendReplanning(replanningDtos);
 	}
 
 }

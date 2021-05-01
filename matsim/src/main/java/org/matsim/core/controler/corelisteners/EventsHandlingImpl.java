@@ -49,7 +49,7 @@ import java.io.File;
 import org.matsim.core.utils.io.IOUtils;
 
 @Singleton
-final class EventsHandlingImpl implements EventsHandling, BeforeMobsimListener,
+public final class EventsHandlingImpl implements EventsHandling, BeforeMobsimListener,
 	IterationEndsListener, ShutdownListener {
 
 	final static private Logger log = Logger.getLogger(EventsHandlingImpl.class);

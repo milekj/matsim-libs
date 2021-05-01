@@ -204,7 +204,7 @@ public final class MasterController implements ControlerI, MatsimServices, Allow
 				  @Override
 				  public void install(){
 					  install( new MasterNewControllerModule() );
-					  install( new ControlerDefaultCoreListenersModule() );
+					  install( new MasterControlerDefaultCoreListenersModule() );
 					  for( AbstractModule module : modules ){
 						  install( module );
 					  }

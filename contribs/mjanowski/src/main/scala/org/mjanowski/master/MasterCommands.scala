@@ -1,7 +1,7 @@
 package org.mjanowski.master
 
 import akka.actor.typed.ActorRef
-import org.matsim.core.mobsim.qsim.qnetsimengine.EventDto
+import org.matsim.core.mobsim.qsim.qnetsimengine.{EventDto, ReplanningDto}
 import org.mjanowski.worker.WorkerCommand
 
 trait MySerializable
@@ -11,8 +11,8 @@ case class RegisterWorker(replyTo: ActorRef[WorkerCommand]) extends MasterComman
 
 case class Events(events: Seq[EventDto], sender: ActorRef[WorkerCommand]) extends MasterCommand
 
-case class FinishEventsProcessing() extends MasterCommand
-
 case class AfterMobsim() extends MasterCommand
 
 case class AfterSimStep(now: Double) extends MasterCommand
+
+case class SendReplanning(replanningDtos: Seq[ReplanningDto], last: Boolean) extends MasterCommand

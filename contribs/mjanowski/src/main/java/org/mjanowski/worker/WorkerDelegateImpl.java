@@ -24,13 +24,14 @@ public class WorkerDelegateImpl implements WorkerDelegate {
     private Scenario sc;
     private CountDownLatch initialized = new CountDownLatch(1);
     private CountDownLatch movingNodesFinishedLatch;
+    private CountDownLatch readyForIteration = new CountDownLatch(0);
     private boolean finished = false;
     private AtomicBoolean allFinished = new AtomicBoolean(true);
     private CountDownLatch canStartNextStep;
 
     @Inject
-    public WorkerDelegateImpl(Scenario scenario, Mobsim mobsim) {
-        workerSim = (WorkerSim) mobsim;
+    public WorkerDelegateImpl(Scenario scenario, WorkerSim workerSim) {
+        this.workerSim = workerSim;
         MySimConfig mySimConfig = (MySimConfig) scenario.getConfig().getModules().get("mySimConfig");
         this.workerMain = new WorkerMain(mySimConfig, workerSim);
         workerSim.setWorkerDelegate(this);
@@ -38,11 +39,14 @@ public class WorkerDelegateImpl implements WorkerDelegate {
 
     @Override
     public void startIteration() {
+        System.out.println("init for next");
+        readyForIteration = new CountDownLatch(1);
         workerMain.startIteration();
     }
 
     @Override
     public void terminateSystem() {
+        System.out.println("terminateing actor system");
         workerMain.terminateSystem();
     }
 
@@ -57,10 +61,19 @@ public class WorkerDelegateImpl implements WorkerDelegate {
     }
 
     @Override
-    public void initialize() {
-        movingNodesFinishedLatch = new CountDownLatch(workerSim.getWorkerNodesIds().size() - 1);
-        initialized.countDown();
+    public void beforeIteration() {
+        if (movingNodesFinishedLatch == null) {
+            movingNodesFinishedLatch = new CountDownLatch(workerSim.getWorkerNodesIds().size() - 1);
+            initialized.countDown();
+        }
+    }
 
+    @Override
+    public void initializeForNextIteration() {
+        finished = false;
+        allFinished = new AtomicBoolean(true);
+        canStartNextStep = null;
+        movingNodesFinishedLatch = new CountDownLatch(workerSim.getWorkerNodesIds().size() - 1);
     }
 
     @Override
@@ -143,11 +156,6 @@ public class WorkerDelegateImpl implements WorkerDelegate {
     }
 
     @Override
-    public void sendFinishEventsProcessing() {
-        workerMain.sendFinishEventsProcessing();
-    }
-
-    @Override
     public void sendAfterMobsim() {
         workerMain.sendAfterMobsim();
     }
@@ -155,6 +163,21 @@ public class WorkerDelegateImpl implements WorkerDelegate {
     @Override
     public void sendAfterSimStep(double time) {
         workerMain.sendAfterSimStep(time);
+    }
+
+    @Override
+    public void readyForNextIteration() {
+        System.out.println("ready for iteration count down");
+        readyForIteration.countDown();
+    }
+
+    @Override
+    public void waitUntilReadyForIteration() {
+        try {
+            readyForIteration.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
 }

@@ -24,11 +24,11 @@ public class WorkerEventsManager implements EventsManager {
     public static final int BATCH_SIZE = 1000;
     private final WorkerDelegate workerDelegate;
     private final BlockingDeque<Event> eventsQueue;
-    private final ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(1);
+    private ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(1);
     private final Runnable sendingThread;
 
     @Inject
-    public WorkerEventsManager(WorkerDelegateImpl workerDelegate) {
+    public WorkerEventsManager(WorkerDelegate workerDelegate) {
         this.workerDelegate = workerDelegate;
         eventsQueue = new LinkedBlockingDeque<>();
         sendingThread = () -> {
@@ -91,7 +91,7 @@ public class WorkerEventsManager implements EventsManager {
             e.printStackTrace();
         }
         sendAllEvents();
-        workerDelegate.sendFinishEventsProcessing();
+        executorService = new ScheduledThreadPoolExecutor(1);
     }
 
     private void scheduleProcessing() {

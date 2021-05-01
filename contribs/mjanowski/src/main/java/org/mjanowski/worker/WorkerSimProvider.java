@@ -22,15 +22,16 @@
 
 package org.mjanowski.worker;
 
-import com.google.inject.ConfigurationException;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
-import com.google.inject.Provider;
+import com.google.inject.*;
 import com.google.inject.name.Named;
 import org.apache.log4j.Logger;
 import org.matsim.core.config.Config;
+import org.matsim.core.mobsim.framework.Mobsim;
 import org.matsim.core.mobsim.qsim.AbstractQSimModule;
+import org.matsim.core.mobsim.qsim.QSim;
+import org.matsim.core.mobsim.qsim.QSimProvider;
 import org.matsim.core.mobsim.qsim.components.QSimComponentsConfig;
+import org.matsim.core.mobsim.qsim.interfaces.Netsim;
 import org.matsim.core.mobsim.qsim.pt.TransitStopHandlerFactory;
 import org.matsim.core.mobsim.qsim.qnetsimengine.QNetworkFactory;
 
@@ -43,23 +44,23 @@ public class WorkerSimProvider implements Provider<WorkerSim> {
 	private Injector injector;
 	private Config config;
 	private WorkerSim workerSim;
+	private QSimProvider qSimProvider;
 	private Collection<AbstractQSimModule> modules;
 	private List<AbstractQSimModule> overridingModules;
 	private QSimComponentsConfig components;
 
 	@Inject
-	WorkerSimProvider(Injector injector, Config config, @Named("overrides") List<AbstractQSimModule> overridingModules,
-					  WorkerSim workerSim) {
+	WorkerSimProvider(Injector injector, Config config, WorkerSim workerSim, QSimProvider qSimProvider) {
 		this.injector = injector;
-		// (these are the implementations)
 		this.config = config;
 		this.workerSim = workerSim;
-		this.components = components;
-		this.overridingModules = overridingModules;
+		this.qSimProvider = qSimProvider;
 	}
 
 	@Override
 	public WorkerSim get() {
+		QSim qSim = qSimProvider.get();
+		workerSim.setQsim(qSim);
 		return workerSim;
 	}
 

@@ -3,7 +3,7 @@ package org.mjanowski.worker
 import akka.actor.typed.ActorRef
 import akka.actor.typed.receptionist.Receptionist
 import com.fasterxml.jackson.databind.annotation.{JsonDeserialize, JsonSerialize}
-import org.matsim.core.mobsim.qsim.qnetsimengine.{AcceptedVehiclesDto, EventDto, MoveVehicleDto}
+import org.matsim.core.mobsim.qsim.qnetsimengine.{AcceptedVehiclesDto, EventDto, MoveVehicleDto, ReplanningDto}
 import org.mjanowski.master.MySerializable
 
 import java.util
@@ -39,8 +39,8 @@ case class ReadyForNextStep(finished: Boolean) extends WorkerCommand
 
 case class SendEvents(events: Seq[EventDto]) extends WorkerCommand
 
-case class SendFinishEventsProcessing() extends WorkerCommand
-
 case class SendAfterMobsim() extends WorkerCommand
 
 case class SendAfterSimStep(now: Double) extends WorkerCommand
+
+case class Replanning(replanningDtos: Seq[ReplanningDto], last: Boolean) extends WorkerCommand

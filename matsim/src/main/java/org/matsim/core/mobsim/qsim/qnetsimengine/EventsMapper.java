@@ -126,7 +126,7 @@ public class EventsMapper {
         return event;
     }
 
-    private static <T> Id<T> idOrNull(String id, Class<T> type) {
+    public static <T> Id<T> idOrNull(String id, Class<T> type) {
         return id != null ? Id.create(id, type) : null;
     }
 }

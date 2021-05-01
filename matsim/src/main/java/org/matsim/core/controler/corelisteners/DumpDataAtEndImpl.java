@@ -65,7 +65,7 @@ import java.util.Collections;
 import java.util.Map;
 
 @Singleton
-final class DumpDataAtEndImpl implements DumpDataAtEnd, ShutdownListener {
+public final class DumpDataAtEndImpl implements DumpDataAtEnd, ShutdownListener {
 	private static final Logger log = Logger.getLogger( DumpDataAtEndImpl.class );
 
 	@Inject

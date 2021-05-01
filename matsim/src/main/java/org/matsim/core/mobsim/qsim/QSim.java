@@ -447,7 +447,7 @@ public final class QSim extends Thread implements VisMobsim, Netsim, ActivityEnd
 		}
 
 		if (analyzeRunTimes) this.startClockTime = System.nanoTime();
-		
+
 		// console printout:
 		this.printSimLog(now);
 		boolean shouldFinish = !workerDelegate.shouldFinish();
@@ -599,7 +599,7 @@ public final class QSim extends Thread implements VisMobsim, Netsim, ActivityEnd
 
 	private double calculateFirstAgentStartTime() {
 		double firstAgentStartTime = Double.POSITIVE_INFINITY;
-		for (MobsimAgent agent : agents.values()) {
+		for (MobsimAgent agent : allAgents.values()) {
 			firstAgentStartTime = Math.min(firstAgentStartTime, agent.getActivityEndTime());
 		}
 		return firstAgentStartTime;

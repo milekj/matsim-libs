@@ -209,7 +209,7 @@ public final class WorkerController implements ControlerI, MatsimServices, Allow
 				  @Override
 				  public void install(){
 					  install( new WorkerNewControllerModule() );
-					  install( new ControlerDefaultCoreListenersModule() );
+					  install( new WorkerControlerDefaultCoreListenersModule() );
 					  for( AbstractModule module : modules ){
 						  install( module );
 					  }

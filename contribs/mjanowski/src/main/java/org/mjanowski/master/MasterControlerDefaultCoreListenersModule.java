@@ -1,11 +1,10 @@
-
 /* *********************************************************************** *
  * project: org.matsim.*
- * EventsManagerModule.java
+ * ControlerDefaultCoreListenersModule.java
  *                                                                         *
  * *********************************************************************** *
  *                                                                         *
- * copyright       : (C) 2019 by the members listed in the COPYING,        *
+ * copyright       : (C) 2015 by the members listed in the COPYING,        *
  *                   LICENSE and WARRANTY file.                            *
  * email           : info at matsim dot org                                *
  *                                                                         *
@@ -18,31 +17,29 @@
  *   See also COPYING, LICENSE and WARRANTY file                           *
  *                                                                         *
  * *********************************************************************** */
+package org.mjanowski.master;
 
- package org.mjanowski.worker;
-
-import com.google.inject.Singleton;
-import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.controler.AbstractModule;
-import org.matsim.core.events.handler.EventHandler;
+import org.matsim.core.controler.corelisteners.*;
+import org.matsim.core.scoring.PlansScoringModule;
 
-import javax.inject.Inject;
-import java.util.Set;
-
-public final class WorkerEventsManagerModule extends AbstractModule {
+/**
+ * Defines the default core listeners.
+ * In 99% of the use cases, this should be left as is.
+ * Most of the process can be configured using more elemental elements:
+ * StrategyManager, ScoringFunction, EventHandlers.
+ *
+ * @author thibautd
+ */
+public class MasterControlerDefaultCoreListenersModule extends AbstractModule {
 
 	@Override
 	public void install() {
-		bindEventsManager().to(WorkerEventsManager.class).in(Singleton.class);
-		bind(EventHandlerRegistrator.class).asEagerSingleton();
-	}
-
-	public static class EventHandlerRegistrator {
-		@Inject
-		EventHandlerRegistrator(EventsManager eventsManager, Set<EventHandler> eventHandlersDeclaredByModules) {
-			for (EventHandler eventHandler : eventHandlersDeclaredByModules) {
-				eventsManager.addHandler(eventHandler);
-			}
-		}
+		install(new PlansScoringModule());
+		bind( PlansReplanning.class ).to( MasterPlansReplanningImpl.class );
+		bind( PlansDumping.class ).to( PlansDumpingImpl.class );
+		bind( EventsHandling.class ).to( EventsHandlingImpl.class );
+		bind( DumpDataAtEnd.class ).to( DumpDataAtEndImpl.class );
 	}
 }
+
