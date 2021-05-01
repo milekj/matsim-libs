@@ -23,6 +23,7 @@ package org.matsim.core.population;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Customizable;
@@ -31,10 +32,12 @@ import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
+import org.matsim.core.mobsim.qsim.qnetsimengine.PlanDto;
+import org.matsim.core.mobsim.qsim.qnetsimengine.PlanElementDto;
 import org.matsim.core.scenario.CustomizableUtils;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 
-/* deliberately package */  final class PlanImpl implements Plan {
+/* deliberately package */  public final class PlanImpl implements Plan {
 
 	private ArrayList<PlanElement> actsLegs = new ArrayList<>();
 
@@ -136,6 +139,11 @@ import org.matsim.utils.objectattributes.attributable.Attributes;
 	}
 
 	@Override
+	public final void setPlanElements(ArrayList<PlanElement> planElements) {
+		this.actsLegs = planElements;
+	}
+
+	@Override
 	public final String toString() {
 
 		String scoreString = "undefined";
@@ -172,4 +180,9 @@ import org.matsim.utils.objectattributes.attributable.Attributes;
 //		}
 //	}
 
+	@Override
+	public PlanDto toDto() {
+		List<PlanElementDto> planElementDtos = actsLegs.stream().map(PlanElement::toDto).collect(Collectors.toList());
+		return new PlanDto(planElementDtos, score, person.getId(), type);
+	}
 }

@@ -21,6 +21,7 @@ package org.matsim.api.core.v01.population;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.api.internal.MatsimPopulationObject;
+import org.matsim.core.mobsim.qsim.qnetsimengine.RouteDto;
 import org.matsim.core.utils.misc.OptionalTime;
 
 /**
@@ -78,5 +79,10 @@ public interface Route extends MatsimPopulationObject {
 	 * </ul>
 	 */
 	public Route clone();
+
+	default RouteDto toDto() {
+		System.out.println(this.getClass());
+		throw new UnsupportedOperationException();
+	}
 
 }

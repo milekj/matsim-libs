@@ -20,10 +20,12 @@
 
 package org.matsim.api.core.v01.population;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.matsim.api.core.v01.Customizable;
 import org.matsim.core.api.internal.MatsimPopulationObject;
+import org.matsim.core.mobsim.qsim.qnetsimengine.PlanDto;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 
 /**
@@ -56,4 +58,7 @@ public interface Plan extends MatsimPopulationObject, Customizable, BasicPlan, A
 	 */
 	public abstract void setPerson(Person person);
 
+	default void setPlanElements(ArrayList<PlanElement> planElements) {
+		throw new UnsupportedOperationException();
+	}
 }

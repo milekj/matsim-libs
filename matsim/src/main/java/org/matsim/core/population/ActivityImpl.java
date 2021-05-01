@@ -24,6 +24,8 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Activity;
+import org.matsim.core.mobsim.qsim.qnetsimengine.ActivityDto;
+import org.matsim.core.mobsim.qsim.qnetsimengine.PlanElementDto;
 import org.matsim.core.utils.misc.OptionalTime;
 import org.matsim.core.utils.misc.Time;
 import org.matsim.facilities.ActivityFacility;
@@ -185,6 +187,11 @@ import org.matsim.utils.objectattributes.attributable.Attributes;
 	@Override
 	public Attributes getAttributes() {
 		return attributes;
+	}
+
+	@Override
+	public PlanElementDto toDto() {
+		return new ActivityDto(endTime.get(), startTime.get(), dur.get(), type, coord.toDto(), linkId, facilityId);
 	}
 
 //	private boolean locked = false ;

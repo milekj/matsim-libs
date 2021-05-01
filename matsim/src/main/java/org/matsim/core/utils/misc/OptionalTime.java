@@ -71,6 +71,10 @@ public final class OptionalTime {
 		return seconds;
 	}
 
+	public double get() {
+		return seconds;
+	}
+
 	public boolean isDefined() {
 		return seconds != Time.UNDEFINED_TIME;
 	}

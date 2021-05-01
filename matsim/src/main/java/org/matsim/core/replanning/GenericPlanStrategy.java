@@ -20,6 +20,9 @@ package org.matsim.core.replanning;
 
 import org.matsim.api.core.v01.population.BasicPlan;
 import org.matsim.api.core.v01.population.HasPlansAndId;
+import org.matsim.core.mobsim.qsim.qnetsimengine.ReplanningDto;
+
+import java.util.List;
 
 /**
  * Notes:<ul>
@@ -55,6 +58,10 @@ public interface GenericPlanStrategy<T extends BasicPlan, I> {
 	 * @see #run(HasPlansAndId)
 	 */
 	public void finish();
+
+	default List<ReplanningDto> finishAndReturn() {
+		throw new UnsupportedOperationException();
+	}
 
 
 }

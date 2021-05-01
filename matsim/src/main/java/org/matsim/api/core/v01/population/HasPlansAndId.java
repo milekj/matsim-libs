@@ -53,6 +53,10 @@ public interface HasPlansAndId<T extends BasicPlan, I> extends Identifiable<I>, 
 
 	public abstract void setSelectedPlan(T selectedPlan);
 
+	default int getSelectedPlanIndex(T selectedPlan) {
+		throw new UnsupportedOperationException();
+	}
+
 	public abstract T createCopyOfSelectedPlanAndMakeSelected() ;
 
 }

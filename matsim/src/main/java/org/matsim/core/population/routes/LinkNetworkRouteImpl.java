@@ -26,6 +26,8 @@ import java.util.List;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.core.mobsim.qsim.qnetsimengine.LinkNetworkRouteDtoImpl;
+import org.matsim.core.mobsim.qsim.qnetsimengine.RouteDto;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.vehicles.Vehicle;
 
@@ -67,7 +69,12 @@ final class LinkNetworkRouteImpl extends AbstractRoute implements NetworkRoute {
 		return cloned;
 	}
 
-	@Override
+    @Override
+    public LinkNetworkRouteDtoImpl toDto() {
+        return new LinkNetworkRouteDtoImpl(getDistance(), getTravelTime().get(), getStartLinkId(), getEndLinkId(), route, travelCost, vehicleId);
+    }
+
+    @Override
 	public List<Id<Link>> getLinkIds() {
 		return this.safeRoute;
 	}
