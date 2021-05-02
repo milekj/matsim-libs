@@ -52,10 +52,8 @@ import org.matsim.vis.snapshotwriters.VisMobsim;
 import org.matsim.vis.snapshotwriters.VisNetwork;
 
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -96,6 +94,7 @@ public final class WorkerSim extends Thread implements VisMobsim, Netsim, Activi
 
 	private int workerId;
 	private Map<Integer, Set<Id<Node>>> workerNodesIds;
+	private Collection<Integer> workersConnections;
 
 	@Inject
 	private WorkerSim(final Scenario sc,
@@ -130,13 +129,26 @@ public final class WorkerSim extends Thread implements VisMobsim, Netsim, Activi
 		this.workerId = workerId;
 	}
 
-	public void setPartitions(Map<Integer, Set<Id<Node>>> workerNodesIds) {
-		Logger.getRootLogger().info("setting partitions to:" + workerNodesIds);
-		this.workerNodesIds = workerNodesIds;
+	public void setPartitions(Map<Integer, Collection<String>> workerNodesStringIds) {
+		this.workerNodesIds = workerNodesStringIds.entrySet()
+				.stream()
+				.collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream().map((Function<String, Id<Node>>) Id::createNodeId).collect(Collectors.toSet())));
+	}
+
+	public void setConnections(Collection<Integer> workersConnections) {
+		this.workersConnections = workersConnections;
 	}
 
 	public Map<Integer, Set<Id<Node>>> getWorkerNodesIds() {
 		return workerNodesIds;
+	}
+
+	public Collection<Integer> getWorkersConnections() {
+		return workersConnections;
+	}
+
+	public int getWorkerConnectionsNumber() {
+		return workersConnections.size();
 	}
 
 	public void runIteration() {

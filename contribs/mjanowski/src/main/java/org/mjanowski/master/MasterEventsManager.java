@@ -166,10 +166,10 @@ public class MasterEventsManager implements EventsManager {
             }
         }
 
-        List<Double> nonNull = eventsQueues.entrySet()
+        Object nonNull = eventsQueues.entrySet()
                 .stream()
                 .filter(e -> e.getValue() != null)
-                .map(Map.Entry::getKey)
+//                .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
 
         System.out.println("Remaining events = " + nonNull);

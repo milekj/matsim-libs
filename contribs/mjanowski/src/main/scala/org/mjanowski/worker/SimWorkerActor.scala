@@ -1,24 +1,20 @@
 package org.mjanowski.worker
 
-import akka.actor.DeadLetter
 import akka.actor.typed.receptionist.Receptionist
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ActorRef, Behavior, LogOptions}
-import akka.event.Logging.LogLevel
-import org.matsim.api.core.v01.Id
-import org.matsim.api.core.v01.network.{Link, Node}
-import org.mjanowski.master.{AfterMobsim, AfterSimStep, Events, MasterCommand, RegisterWorker, SimMasterActor}
-import org.mjanowski.worker.SimWorkerActor.workerSim
+import akka.actor.typed.{ActorRef, Behavior}
+import org.mjanowski.master._
 
-import java.util
-import scala.collection.JavaConverters.mapAsJavaMap
-import scala.jdk.CollectionConverters.{MapHasAsJava, SeqHasAsJava, SetHasAsJava}
+import scala.collection.JavaConverters.asScalaIteratorConverter
+import scala.collection.mutable
+import scala.jdk.CollectionConverters.{CollectionHasAsScala, MapHasAsScala, SeqHasAsJava}
 
 object SimWorkerActor {
 
   var master: ActorRef[MasterCommand] = _
   var workerSim: WorkerSim = _
   var workerRefs: collection.Map[Int, ActorRef[WorkerCommand]] = _
+  var workerConnections: Iterable[ActorRef[WorkerCommand]] = _
 
   var workerId: Int = _
   var canStartIteration: Boolean = false
@@ -40,18 +36,17 @@ object SimWorkerActor {
           })
           Behaviors.same
 
-        case AssignNodes(workerId, workersNodesIds, workersRefs) =>
+        case AssignNodes(workerId, workersNodesIds, workersRefs, workerConnections) =>
           SimWorkerActor.workerRefs = workersRefs
-          val javaWorkersNodesId: Map[Integer, util.Set[Id[Node]]] =
-            workersNodesIds.map({ case (k, v) => (Integer.valueOf(k), v.map(id => Id.create(id, classOf[Node])).toSet.asJava) })
           println("hura")
-          println(workerId, workersNodesIds, workersRefs)
+          println(workerId, workersRefs, workerConnections)
           this.workerId = workerId
           workerSim.setWorkerId(workerId)
-          workerSim.setPartitions(javaWorkersNodesId.asJava)
+          workerSim.setPartitions(workersNodesIds)
+          workerSim.setConnections(workerConnections)
+          this.workerConnections = workerConnections.asScala.map(wid => workersRefs(wid))
 
           println("assigned = true")
-          println(Thread.currentThread().getName());
           assigned = true
           if (canStartIteration)
             workerSim.runIteration()
@@ -76,8 +71,8 @@ object SimWorkerActor {
           Behaviors.same
 
         case SendMovingNodesFinished() =>
-          workerRefs.view.filterKeys(k => k != workerId)
-            .foreach({ case (k, v) => v ! MovingNodesFinished() })
+          workerConnections.foreach(w => w ! MovingNodesFinished())
+
           Behaviors.same
 
         case MovingNodesFinished() =>
@@ -85,8 +80,7 @@ object SimWorkerActor {
           Behaviors.same
 
         case SendReadyForNextStep(finished) =>
-          workerRefs.view.filterKeys(k => k != workerId)
-            .foreach({ case (k, v) => v ! ReadyForNextStep(finished) })
+          workerConnections.foreach(w => w ! ReadyForNextStep(finished))
           Behaviors.same
 
         case ReadyForNextStep(finished) =>

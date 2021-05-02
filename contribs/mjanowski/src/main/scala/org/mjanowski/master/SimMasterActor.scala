@@ -4,20 +4,25 @@ import akka.actor.typed.receptionist.{Receptionist, ServiceKey}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import org.apache.log4j.Logger
-import org.matsim.api.core.v01.network.Network
+import org.matsim.api.core.v01.Id
+import org.matsim.api.core.v01.network.{Network, Node}
 import org.matsim.core.api.experimental.events.EventsManager
 import org.matsim.core.mobsim.qsim.MasterDelegate
 import org.matsim.core.mobsim.qsim.qnetsimengine.EventsMapper
 import org.mjanowski.worker.{AssignNodes, Replanning, WorkerCommand}
 import org.mjanowski.{NetworkPartitioner, Partition}
 
+import java.util.AbstractMap.SimpleEntry
+import java.util.stream.Collectors
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.{CollectionHasAsScala, MapHasAsScala, SeqHasAsJava}
 
 object SimMasterActor {
 
   val masterKey: ServiceKey[MasterCommand] = ServiceKey[MasterCommand]("master")
-  private var partitions: mutable.Map[Int, Partition] = _
+  private var partitions: java.util.Map[Integer, Partition] = _
+  private var workersIds: java.util.Map[Integer, java.util.Collection[String]] = _
+  private var connections: java.util.Map[Integer, java.util.Collection[Integer]] = _
   private val workers = mutable.Map[Int, ActorRef[WorkerCommand]]()
   private var workersNumber: Int = _
   private var masterDelegate: MasterDelegate = _
@@ -27,8 +32,8 @@ object SimMasterActor {
     SimMasterActor.masterDelegate = masterDelegate
     val partitioner = new NetworkPartitioner(network)
     partitions = partitioner.partition(workersNumber)
-      .asScala
-      .map({ case (id, p) => (Option(id).map(Int.unbox).get, p) })
+    workersIds = partitioner.partitionsToWorkersIds(partitions)
+    connections = partitioner.getWorkersConnections(partitions)
 
     Behaviors.setup(context => {
       context.system.receptionist ! Receptionist.register(masterKey, context.self)
@@ -38,10 +43,10 @@ object SimMasterActor {
           println("witam!")
           workers += (workers.size -> sender)
           if (workers.size == workersNumber) {
-            val workersNodesIds = partitions.view.mapValues(_.getNodes.asScala)
-              .mapValues(l => l.map(_.getId.toString).toSeq)
-              .toMap
-            workers.map({ case (id, ref) => (ref, AssignNodes(id, workersNodesIds, workers)) })
+            workers.map({ case (id, ref) => (ref, AssignNodes(id,
+              workersIds,
+              workers.toMap,
+              connections.get(id))) })
               .foreach({ case (ref, command) => ref ! command })
           }
           Behaviors.same
