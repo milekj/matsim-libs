@@ -13,5 +13,6 @@
 		<module>contribs</module>
 		<module>distribution</module>
 		<module>los_angeles</module>
+		<module>mjanowski</module>
 	</modules>
 </project>

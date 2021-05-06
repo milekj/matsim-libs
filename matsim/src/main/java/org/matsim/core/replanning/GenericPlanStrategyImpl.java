@@ -19,13 +19,21 @@
 package org.matsim.core.replanning;
 
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.BasicPlan;
 import org.matsim.api.core.v01.population.HasPlansAndId;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.mobsim.qsim.qnetsimengine.PlanDto;
+import org.matsim.core.mobsim.qsim.qnetsimengine.ReplanningDto;
 import org.matsim.core.replanning.modules.GenericPlanStrategyModule;
 import org.matsim.core.replanning.selectors.PlanSelector;
 import org.matsim.core.replanning.selectors.RandomUnscoredPlanSelector;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author nagel
@@ -37,6 +45,7 @@ public class GenericPlanStrategyImpl<T extends BasicPlan, I> implements GenericP
 	private GenericPlanStrategyModule<T> firstModule = null;
 	private final ArrayList<GenericPlanStrategyModule<T>> modules = new ArrayList<>();
 	private final ArrayList<T> plans = new ArrayList<>();
+	private final List<ReplanningDto> selectedPlansReplanningDtos = new LinkedList<>();
 	private long counter = 0;
 	private ReplanningContext replanningContext;
 	private final static Logger log = Logger.getLogger(PlanStrategyImpl.class);
@@ -95,6 +104,8 @@ public class GenericPlanStrategyImpl<T extends BasicPlan, I> implements GenericP
 
 			// start working on this new plan:
 			this.firstModule.handlePlan(plan);
+		} else {
+			selectedPlansReplanningDtos.add(ReplanningDto.withSelectedPlan((Id<Person>) person.getId(), person.getSelectedPlanIndex(plan)));
 		}
 
 	}
@@ -124,6 +135,34 @@ public class GenericPlanStrategyImpl<T extends BasicPlan, I> implements GenericP
 		this.plans.clear();
 		log.info("Plan-Strategy finished, " + this.counter + " plans handled. Strategy: " + this.toString());
 		this.counter = 0;
+	}
+
+	@Override
+	public List<ReplanningDto> finishAndReturn() {
+		if (this.firstModule != null) {
+			// finish the first module
+			this.firstModule.finishReplanning();
+			// now work through the others
+			for (GenericPlanStrategyModule<T> module : this.modules) {
+				module.prepareReplanning(replanningContext);
+				for (T plan : this.plans) {
+					module.handlePlan(plan);
+				}
+				module.finishReplanning();
+			}
+		}
+		Stream<ReplanningDto> newPlanReplanningDtos = plans.stream()
+				.map(p -> {
+					PlanDto planDto = p.toDto();
+					Id<Person> personId = planDto.getPersonId();
+					return ReplanningDto.withNewPlan(personId, planDto);
+				});
+		List<ReplanningDto> result = Stream.concat(newPlanReplanningDtos, selectedPlansReplanningDtos.stream())
+				.collect(Collectors.toList());
+		this.plans.clear();
+		log.info("Plan-Strategy finished, " + this.counter + " plans handled. Strategy: " + this.toString());
+		this.counter = 0;
+		return result;
 	}
 
 	@Override

@@ -47,7 +47,7 @@ import org.matsim.core.utils.geometry.transformations.TransformationFactory;
  * @author mrieser
  */
 @Singleton
-final class PlansDumpingImpl implements PlansDumping, BeforeMobsimListener {
+public final class PlansDumpingImpl implements PlansDumping, BeforeMobsimListener {
 
 	static final private Logger log = Logger.getLogger(PlansDumpingImpl.class);
 

@@ -21,9 +21,12 @@ package org.matsim.core.scenario;
 
 import com.google.inject.Inject;
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Identifiable;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.groups.FacilitiesConfigGroup;
@@ -48,7 +51,6 @@ import org.matsim.utils.objectattributes.ObjectAttributesXmlReader;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.vehicles.MatsimVehicleReader;
 
-
 import java.net.URL;
 import java.util.*;
 
@@ -64,7 +66,7 @@ import static org.matsim.core.config.groups.PlansConfigGroup.PERSON_ATTRIBUTES_D
  * loaded or created by the user.
  * <p></p>
  * Design thoughts:<ul>
- * <li> Given what we have now, does it make sense to leave this class public?  yy kai, mar'11
+ * <li> Given what we have now, does it make sense to leave this class public?  yy kai, mar"11
  * </ul>
  *
  * @see org.matsim.core.scenario.MutableScenario
@@ -100,7 +102,7 @@ class ScenarioLoaderImpl {
 
 	/**
 	 * Loads all mandatory Scenario elements and
-	 * if activated in config's scenario module/group
+	 * if activated in config"s scenario module/group
 	 * optional elements.
 	 * @return the Scenario
 	 */
@@ -108,7 +110,7 @@ class ScenarioLoaderImpl {
 //		String currentDir = new File("tmp").getAbsolutePath();
 //		currentDir = currentDir.substring(0, currentDir.length() - 3);
 //		log.info("loading scenario from base directory: " + currentDir);
-		// the above is not used and thus only causing confusion in the log output.  kai, sep'18
+		// the above is not used and thus only causing confusion in the log output.  kai, sep"18
 
 		this.loadNetwork();
 		this.loadActivityFacilities();
@@ -123,6 +125,14 @@ class ScenarioLoaderImpl {
 			this.loadLanes();
 		}
 		return this.scenario;
+	}
+
+	private Id<Node> getFromNodeId(Map<Id<Link>, ? extends Link> linksMap, Id<Link> linkId) {
+		return linksMap.get(linkId).getFromNode().getId();
+	}
+
+	private Id<Node> getToNodeId(Map<Id<Link>, ? extends Link> linksMap, Id<Link> linkId) {
+		return linksMap.get(linkId).getToNode().getId();
 	}
 
 	/**
@@ -224,7 +234,7 @@ class ScenarioLoaderImpl {
 //			if ( outDir.exists() && outDir.canWrite() ){
 //				// since ScenarioLoader is supposed to only read material,  there are cases where the output directory does not exist at
 //				// this stage. One could maybe write to the "config.getContext()" directory.  However, sometimes this is a URL, and thus also
-//				// non-writeable, and it is even less systematic than writing into the output directory. kai, jun'19
+//				// non-writeable, and it is even less systematic than writing into the output directory. kai, jun"19
 //
 //				String outFilename = outputDirectory + "/input_plans_with_person_attributes.xml.gz";
 //				PopulationUtils.writePopulation( scenario.getPopulation(), outFilename );
@@ -233,7 +243,7 @@ class ScenarioLoaderImpl {
 //					  "a file with path=" + outFilename + " was just written in order to facilitate the transition to having person attributes inside " +
 //						    "the persons. " );
 //			}
-			// TD says to rather not have this kind of side effect.  kai, jul'19
+			// TD says to rather not have this kind of side effect.  kai, jul"19
 
 			if ( !this.config.plans().isInsistingOnUsingDeprecatedPersonAttributeFile() ) {
 				throw new RuntimeException(PERSON_ATTRIBUTES_DEPRECATION_MESSAGE) ;
@@ -368,7 +378,7 @@ class ScenarioLoaderImpl {
 			attributes.removeAllAttributes( facility.getId().toString() );
 		}
 		// (some of the above could also become a static helper method in ObjectAttributesUtils, but this here seems the only
-		// place within matsim core where the personAttributes are automatically read so maybe there is no need for this. kai, jun'19)
+		// place within matsim core where the personAttributes are automatically read so maybe there is no need for this. kai, jun"19)
 
 		if ( !attributes.toString().equals( "" ) ) {
 			log.warn( message ) ;

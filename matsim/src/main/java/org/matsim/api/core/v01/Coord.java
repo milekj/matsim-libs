@@ -20,6 +20,8 @@
 
 package org.matsim.api.core.v01;
 
+import org.matsim.core.mobsim.qsim.qnetsimengine.CoordDto;
+
 import java.io.Serializable;
 
 /**
@@ -129,6 +131,10 @@ public final class Coord implements Serializable {
 					(this.y == o.getY()) &&
 					(this.z == o.getZ());
 		}
+	}
+
+	public CoordDto toDto() {
+		return new CoordDto(x, y, z);
 	}
 
 	

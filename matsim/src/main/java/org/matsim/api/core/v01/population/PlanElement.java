@@ -21,8 +21,14 @@
 package org.matsim.api.core.v01.population;
 
 import org.matsim.core.api.internal.MatsimPopulationObject;
+import org.matsim.core.mobsim.qsim.qnetsimengine.ActivityDto;
+import org.matsim.core.mobsim.qsim.qnetsimengine.PlanElementDto;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 
 public interface PlanElement extends MatsimPopulationObject, Attributable {
+
+    default PlanElementDto toDto() {
+        throw new UnsupportedOperationException();
+    }
 
 }

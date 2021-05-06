@@ -22,6 +22,7 @@ package org.matsim.core.population.routes;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.core.mobsim.qsim.qnetsimengine.GenericRouteDtoImpl;
 
 
 public final class GenericRouteImpl extends AbstractRoute {
@@ -54,4 +55,9 @@ public final class GenericRouteImpl extends AbstractRoute {
 		return ROUTE_TYPE;
 	}
 
+	@Override
+	public GenericRouteDtoImpl toDto() {
+		//todo tworzenie z dto
+		return new GenericRouteDtoImpl(getDistance(), getTravelTime().get(), getStartLinkId(), getEndLinkId(), routeDescription);
+	}
 }

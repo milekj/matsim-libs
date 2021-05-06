@@ -27,4 +27,5 @@ import org.matsim.utils.objectattributes.attributable.Attributable;
  */
 public interface Person extends Customizable, Attributable, HasPlansAndId<Plan, Person> {
 
+    void setSelectedPlan(int planIndex);
 }

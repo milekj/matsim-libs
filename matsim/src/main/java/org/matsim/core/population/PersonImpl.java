@@ -75,6 +75,16 @@ import org.matsim.utils.objectattributes.attributable.Attributes;
 	}
 
 	@Override
+	public void setSelectedPlan(int planIndex) {
+		this.selectedPlan = plans.get(planIndex);
+	}
+
+	@Override
+	public int getSelectedPlanIndex(Plan selectedPlan) {
+		return plans.indexOf(selectedPlan);
+	}
+
+	@Override
 	public Plan createCopyOfSelectedPlanAndMakeSelected() {
 		Plan oldPlan = this.getSelectedPlan();
 		if (oldPlan == null) {

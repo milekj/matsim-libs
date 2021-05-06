@@ -26,6 +26,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.population.BasicPlan;
@@ -33,6 +34,7 @@ import org.matsim.api.core.v01.population.HasPlansAndId;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.api.internal.MatsimManager;
 import org.matsim.core.gbl.MatsimRandom;
+import org.matsim.core.mobsim.qsim.qnetsimengine.ReplanningDto;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.replanning.selectors.PlanSelector;
 import org.matsim.core.replanning.selectors.GenericWorstPlanForRemovalSelector;
@@ -183,8 +185,9 @@ public class GenericStrategyManager<PL extends BasicPlan, AG extends HasPlansAnd
 	 * Randomly chooses for each person of the population a strategy and uses that
 	 * strategy on the person.
 	 *
+	 * @return
 	 */
-	final void run(
+	final List<ReplanningDto> run(
 			final Iterable<? extends HasPlansAndId<PL, AG>> persons,
 					Population population,
 					final ReplanningContext replanningContext) {
@@ -219,9 +222,13 @@ public class GenericStrategyManager<PL extends BasicPlan, AG extends HasPlansAnd
 		}
 
 		// finally make sure all strategies have finished there work
-		for (GenericPlanStrategy<PL, AG> strategy : distinctStrategies()) {
-			strategy.finish();
-		}
+		return distinctStrategies().stream()
+				.map(GenericPlanStrategy::finishAndReturn)
+				.flatMap(List::stream)
+				.collect(Collectors.toList());
+//		for (GenericPlanStrategy<PL, AG> strategy : distinctStrategies()) {
+//			List<ReplanningDto> replanningDtos = strategy.finishAndReturn();
+//		}
 
 	}
 

@@ -40,7 +40,7 @@ import javax.inject.Provider;
  * @author mrieser
  */
 @Singleton
-final class PlansReplanningImpl implements PlansReplanning, ReplanningListener {
+public final class PlansReplanningImpl implements PlansReplanning, ReplanningListener {
 
 	private final Provider<ReplanningContext> replanningContextProvider;
 	private Population population;

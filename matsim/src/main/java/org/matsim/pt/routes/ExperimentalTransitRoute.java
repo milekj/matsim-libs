@@ -22,6 +22,8 @@ package org.matsim.pt.routes;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.core.mobsim.qsim.qnetsimengine.ExperimentalTransitRouteDto;
+import org.matsim.core.mobsim.qsim.qnetsimengine.RouteDto;
 import org.matsim.core.population.routes.AbstractRoute;
 import org.matsim.core.utils.misc.OptionalTime;
 import org.matsim.pt.transitSchedule.api.TransitLine;
@@ -43,7 +45,7 @@ public class ExperimentalTransitRoute extends AbstractRoute implements TransitPa
 	private String description = null;
 	private String routeDescription;
 
-	/* package */ ExperimentalTransitRoute(final Id<Link> startLinkId, final Id<Link> endLinkId) {
+	public ExperimentalTransitRoute(final Id<Link> startLinkId, final Id<Link> endLinkId) {
 		super(startLinkId, endLinkId);
 	}
 
@@ -133,5 +135,10 @@ public class ExperimentalTransitRoute extends AbstractRoute implements TransitPa
 	@Override
 	public OptionalTime getBoardingTime() {
 		return OptionalTime.undefined();
+	}
+
+	@Override
+	public RouteDto toDto() {
+		return new ExperimentalTransitRouteDto(getDistance(), getTravelTime().get(), getStartLinkId(), getEndLinkId(), routeDescription);
 	}
 }

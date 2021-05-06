@@ -21,10 +21,16 @@
 
  package org.matsim.api.core.v01.population;
 
+import org.matsim.core.mobsim.qsim.qnetsimengine.PlanDto;
+
 public interface BasicPlan {
 
 	public abstract void setScore(Double score);
 
 	public abstract Double getScore();
+
+	default PlanDto toDto() {
+		throw new UnsupportedOperationException();
+	}
 	
 }

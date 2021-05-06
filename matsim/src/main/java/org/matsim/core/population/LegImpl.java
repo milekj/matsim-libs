@@ -22,6 +22,8 @@ package org.matsim.core.population;
 
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Route;
+import org.matsim.core.mobsim.qsim.qnetsimengine.LegDto;
+import org.matsim.core.mobsim.qsim.qnetsimengine.PlanElementDto;
 import org.matsim.core.router.TripStructureUtils;
 import org.matsim.core.utils.misc.OptionalTime;
 import org.matsim.core.utils.misc.Time;
@@ -121,7 +123,12 @@ import org.matsim.utils.objectattributes.attributable.Attributes;
 		return attributes;
 	}
 
-	//	private boolean locked;
+    @Override
+    public PlanElementDto toDto() {
+		return new LegDto(route.toDto(), depTime.get(), travTime.get(), mode);
+    }
+
+    //	private boolean locked;
 //
 //	public void setLocked() {
 //		this.locked = true ;
