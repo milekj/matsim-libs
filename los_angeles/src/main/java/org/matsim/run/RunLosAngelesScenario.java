@@ -171,8 +171,8 @@ public class RunLosAngelesScenario {
 		config.subtourModeChoice().setProbaForRandomSingleTripMode( 0.5 );
 		
 		config.plansCalcRoute().setRoutingRandomness( 3. );
-		config.plansCalcRoute().removeModeRoutingParams(TransportMode.ride); // since we are using the (congested) car travel time
-		config.plansCalcRoute().removeModeRoutingParams(TransportMode.pt); // since we are using simulated public transit
+//		config.plansCalcRoute().removeModeRoutingParams(TransportMode.ride); // since we are using the (congested) car travel time
+//		config.plansCalcRoute().removeModeRoutingParams(TransportMode.pt); // since we are using simulated public transit
 		config.plansCalcRoute().removeModeRoutingParams("undefined"); // since we don't have such a mode
 	
 		config.qsim().setInsertingWaitingVehiclesBeforeDrivingVehicles( true );

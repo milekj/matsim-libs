@@ -56,7 +56,7 @@ public class ReduceScenario {
 		}
 		
 		if ( args.length==0 ) {
-			argsWithoutCustomAttributes = new String[] {"./scenarios/los-angeles-v1.1/input/los-angeles-v1.1-10pct.config.xml"}  ;
+			argsWithoutCustomAttributes = new String[] {"./examples/scenarios/los-angeles/config.xml"}  ;
 			planningAreaShpFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/us/los-angeles/los-angeles-v1.0/original-data/shp-data/WSC-LA-planning-area/WSC-LA-planning-area.shp";
 			
 		} else {
