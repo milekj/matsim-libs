@@ -15,9 +15,10 @@ case class ListingResponse(listing: Receptionist.Listing) extends WorkerCommand
 
 //TOOD seq -> iterable???
 
-case class AssignNodes(workerId: Int,
-                       @JsonDeserialize(keyAs = classOf[Integer]) workersNodesIds: Map[Int, Seq[String]],
-                       @JsonDeserialize(keyAs = classOf[Integer]) workersRefs: collection.Map[Int, ActorRef[WorkerCommand]]) extends WorkerCommand
+case class AssignNodes(workerId: Integer,
+                        @JsonDeserialize(keyAs = classOf[Integer]) workersNodesIds: java.util.Map[Integer, util.Collection[String]],
+                        @JsonDeserialize(keyAs = classOf[Integer]) workersRefs: Map[Int, ActorRef[WorkerCommand]],
+                        @JsonDeserialize(keyAs = classOf[Integer]) workersConnections: util.Collection[Integer]) extends WorkerCommand
 
 case class StartIteration() extends WorkerCommand
 

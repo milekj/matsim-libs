@@ -63,7 +63,7 @@ public class WorkerDelegateImpl implements WorkerDelegate {
     @Override
     public void beforeIteration() {
         if (movingNodesFinishedLatch == null) {
-            movingNodesFinishedLatch = new CountDownLatch(workerSim.getWorkerNodesIds().size() - 1);
+            movingNodesFinishedLatch = new CountDownLatch(workerSim.getWorkerConnectionsNumber());
             initialized.countDown();
         }
     }
@@ -73,7 +73,7 @@ public class WorkerDelegateImpl implements WorkerDelegate {
         finished = false;
         allFinished = new AtomicBoolean(true);
         canStartNextStep = null;
-        movingNodesFinishedLatch = new CountDownLatch(workerSim.getWorkerNodesIds().size() - 1);
+        movingNodesFinishedLatch = new CountDownLatch(workerSim.getWorkerConnectionsNumber());
     }
 
     @Override
@@ -89,7 +89,7 @@ public class WorkerDelegateImpl implements WorkerDelegate {
 //        Logger.getRootLogger().info("stop time: " + workerSim.getStopTime());
 //        Logger.getRootLogger().info("now: " + workerSim.getSimTimer().getTimeOfDay());
         allFinished = new AtomicBoolean(this.finished);
-        canStartNextStep = new CountDownLatch(workerSim.getWorkerNodesIds().size() - 1);
+        canStartNextStep = new CountDownLatch(workerSim.getWorkerConnectionsNumber());
         workerMain.sendFinished();
     }
 
@@ -128,7 +128,7 @@ public class WorkerDelegateImpl implements WorkerDelegate {
 
     @Override
     public void initializeForNextStep() {
-        movingNodesFinishedLatch = new CountDownLatch(workerSim.getWorkerNodesIds().size() - 1);
+        movingNodesFinishedLatch = new CountDownLatch(workerSim.getWorkerConnectionsNumber());
     }
 
     @Override
