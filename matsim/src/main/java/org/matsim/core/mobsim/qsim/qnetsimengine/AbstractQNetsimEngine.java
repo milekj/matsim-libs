@@ -21,7 +21,10 @@
 package org.matsim.core.mobsim.qsim.qnetsimengine;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -391,8 +394,38 @@ abstract class AbstractQNetsimEngine<A extends AbstractQNetsimEngineRunner> impl
 		int nodes[] = new int[this.engines.size()];
 		int links[] = new int[this.engines.size()];
 
+
+		//todo tutaj przypisanie !!!!!!!!!
+
+		QSim qSim = getQSim();
+		int workerId = qSim.getWorkerId();
+		ImmutableSet<Id<Node>> nodesIdsAssigned = qSim.getWorkerNodesIds().get(workerId);
+		Map<Id<Node>, QNodeI> netsimNodes = network.getNetsimNodes();
+		List<QNodeI> assignedNodes = netsimNodes
+				.entrySet()
+				.stream()
+				.filter(e -> nodesIdsAssigned.contains(e.getKey()))
+				.map(Map.Entry::getValue)
+				//trzeba tu dodać jeszcze node'y z inlinków (które tak naprawdę są na innym workerze), bo są potrzebne do obsługi linków
+				.flatMap(n ->
+						Stream.concat(
+								Stream.of(n.getNode().getId()),
+
+								n.getNode().getInLinks().values()
+										.stream()
+										.map(l -> l.getFromNode().getId())
+						)
+
+				)
+				.distinct()
+				.map(netsimNodes::get)
+				.collect(Collectors.toList());
+
+		System.out.println("Assigned to worker: " + nodesIdsAssigned.size());
+		System.out.println("Assigned + boundary nodes (real assigned): " + assignedNodes.size());
+
 		int roundRobin = 0;
-		for (QNodeI node : network.getNetsimNodes().values()) {
+		for (QNodeI node : assignedNodes) {
 			int i = roundRobin % this.engines.size();
 			if( node instanceof AbstractQNode){
 				((AbstractQNode) node).setNetElementActivationRegistry(this.engines.get(i));

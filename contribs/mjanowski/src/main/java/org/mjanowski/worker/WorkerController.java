@@ -22,6 +22,7 @@ import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.log4j.Logger;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.matsim.analysis.CalcLinkStats;
@@ -33,12 +34,9 @@ import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigGroup;
-import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.consistency.ConfigConsistencyCheckerImpl;
 import org.matsim.core.config.consistency.UnmaterializedConfigGroupChecker;
 import org.matsim.core.controler.*;
-import org.matsim.core.controler.corelisteners.ControlerDefaultCoreListenersModule;
 import org.matsim.core.controler.listener.ControlerListener;
 import org.matsim.core.events.handler.EventHandler;
 import org.matsim.core.gbl.Gbl;
@@ -56,7 +54,7 @@ import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.scenario.ScenarioByConfigModule;
 import org.matsim.core.scenario.ScenarioByInstanceModule;
 import org.matsim.core.scoring.ScoringFunctionFactory;
-import org.mjanowski.MySim;
+import org.matsim.run.RunLosAngelesScenario;
 import org.mjanowski.MySimConfig;
 
 import java.util.*;
@@ -69,9 +67,10 @@ import java.util.*;
  * @author mrieser
  */
 public final class WorkerController implements ControlerI, MatsimServices, AllowsConfiguration {
-	// yyyy Design thoughts:
-	// * Seems to me that we should try to get everything here final.  Flexibility is provided by the ability to set or add factories.  If this is
-	// not sufficient, people should use AbstractController.  kai, jan'13
+
+	static {
+		System.setProperty("logfile.suffix", RandomStringUtils.random(10, "qwertyuiopasdfghjklzxcvbnm"));
+	}
 
 	public static final String DIRECTORY_ITERS = "ITERS";
 
@@ -160,10 +159,10 @@ public final class WorkerController implements ControlerI, MatsimServices, Allow
 		String configFileName = args[0];
 		if (configFileName == null)
 			throw new IllegalArgumentException("Either the config or the filename of a configfile must be set to initialize the Controler.");
-		this.config = ConfigUtils.loadConfig(configFileName);
+		this.config = RunLosAngelesScenario.prepareConfig(args);
 		this.config.addConfigConsistencyChecker(new ConfigConsistencyCheckerImpl());
 		this.overrides = new ScenarioByConfigModule();
-		MySimConfig mySimConfig = new MySimConfig(args[1], args[2], 0);
+		MySimConfig mySimConfig = new MySimConfig(args[1], args[2], args[3], 0);
 		this.config.addModule(mySimConfig);
 
 		this.config.parallelEventHandling().makeLocked();

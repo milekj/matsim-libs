@@ -100,10 +100,6 @@ abstract class AbstractQNetsimEngineRunner extends NetElementActivationRegistry 
 		boolean remainsActive;
 		this.lockNodes = true;
 		QNodeI node;
-		//todo co z aktywowaniem
-		//todo mmulithreaded qsim
-		//todo te wszystkie active itd.
-
 		Iterator<QNodeI> simNodes = this.nodesQueue.iterator();
 		while (simNodes.hasNext()) {
 			node = simNodes.next();

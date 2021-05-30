@@ -71,6 +71,14 @@ public final class PlanBasedDriverAgentImpl implements DriverAgent {
 		this.cachedNextLinkId = null;
 	}
 
+	@Override
+	public void notifyVehicleDeparture(Id<Link> newLinkId, int personLinkIndex, int planIndex) {
+		this.basicPlanAgentDelegate.setCurrentLinkId(newLinkId) ;
+		this.basicPlanAgentDelegate.setCurrentLinkIndex(personLinkIndex);
+		this.basicPlanAgentDelegate.setCurrentPlanElementIndex(planIndex);
+		this.cachedNextLinkId = null;
+	}
+
 	/**
 	 * Returns the next link the vehicle will drive along.
 	 *

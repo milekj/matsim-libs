@@ -15,4 +15,8 @@ case class AfterMobsim() extends MasterCommand
 
 case class AfterSimStep(now: Double) extends MasterCommand
 
-case class SendReplanning(replanningDtos: Seq[ReplanningDto], last: Boolean) extends MasterCommand
+case class SendReplanning(replanningDtos: java.util.List[ReplanningDto], last: Boolean) extends MasterCommand
+
+case class SendWorkerAssignments() extends MasterCommand
+
+case class TerminateSystem() extends MasterCommand

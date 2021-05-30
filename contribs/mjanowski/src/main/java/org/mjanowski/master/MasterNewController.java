@@ -27,8 +27,10 @@ import org.matsim.core.controler.*;
 import org.matsim.core.controler.corelisteners.*;
 import org.matsim.core.controler.listener.ControlerListener;
 import org.matsim.core.mobsim.framework.Mobsim;
+import org.matsim.core.mobsim.qsim.MasterDelegate;
 
 import javax.inject.Inject;
+import java.util.Collections;
 import java.util.Set;
 
 class MasterNewController extends AbstractController implements ControlerI {
@@ -42,7 +44,7 @@ class MasterNewController extends AbstractController implements ControlerI {
 	private final EventsHandling eventsHandling;
 	private final PlansDumping plansDumping;
 	private final PlansReplanning plansReplanning;
-	private final Mobsim masterSim;
+	private final MasterSim masterSim;
 	private final PlansScoring plansScoring;
 	private final TerminationCriterion terminationCriterion;
 	private final DumpDataAtEnd dumpDataAtEnd;
@@ -70,7 +72,7 @@ class MasterNewController extends AbstractController implements ControlerI {
 		this.eventsHandling = eventsHandling;
 		this.plansDumping = plansDumping;
 		this.plansReplanning = plansReplanning;
-		this.masterSim = masterSim;
+		this.masterSim = (MasterSim) masterSim;
 		this.plansScoring = plansScoring;
 		this.terminationCriterion = terminationCriterion;
 		this.dumpDataAtEnd = dumpDataAtEnd;
@@ -119,6 +121,8 @@ class MasterNewController extends AbstractController implements ControlerI {
 	@Override
 	protected final void prepareForMobsim() {
 		this.prepareForMobsim.run() ;
+		MasterDelegate masterDelegate = this.masterSim.getMasterDelegate();
+		masterDelegate.beforeMobsim();
 //		this.prepareForSim.run() ;
 	}
 

@@ -15,6 +15,11 @@ public class Partition {
         nodes = new LinkedList<>();
     }
 
+    public Partition(int maxSize, List<Node> nodes) {
+        this.maxSize = maxSize;
+        this.nodes = nodes;
+    }
+
     public void addNode(Node node) {
         nodes.add(node);
     }

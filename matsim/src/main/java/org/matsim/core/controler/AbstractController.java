@@ -75,7 +75,7 @@ import org.matsim.utils.MemoryObserver;
             public void run() throws MatsimRuntimeModifications.UnexpectedShutdownException {
                 loadCoreListeners();
                 controlerListenerManagerImpl.fireControlerStartupEvent();
-                ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "config dump before iterations start");
+//                ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "config dump before iterations start");
                 prepareForSim();
                 doIterations(config);
             }

@@ -3,6 +3,7 @@ package org.matsim.core.mobsim.qsim;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.mobsim.qsim.qnetsimengine.AcceptedVehiclesDto;
+import org.matsim.core.mobsim.qsim.qnetsimengine.DepartVehicleDto;
 import org.matsim.core.mobsim.qsim.qnetsimengine.EventDto;
 import org.matsim.core.mobsim.qsim.qnetsimengine.MoveVehicleDto;
 
@@ -30,7 +31,7 @@ public interface WorkerDelegate {
 
     void sendFinished(boolean finished);
 
-    void movingNodesFinished();
+    void movingNodesFinished(boolean workerFinished);
 
     void readyForNextStep(boolean finished);
 
@@ -51,4 +52,8 @@ public interface WorkerDelegate {
     void readyForNextIteration();
 
     void waitUntilReadyForIteration();
+
+    void checkIfShouldFinish();
+
+    void sendVehicleDeparture(Integer toNodeWorkerId, DepartVehicleDto moveVehicleDto);
 }

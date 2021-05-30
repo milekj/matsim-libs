@@ -7,6 +7,7 @@ import org.matsim.core.mobsim.framework.Mobsim;
 import org.matsim.core.mobsim.qsim.MasterDelegate;
 import org.matsim.core.mobsim.qsim.qnetsimengine.EventDto;
 import org.matsim.core.mobsim.qsim.qnetsimengine.ReplanningDto;
+import org.matsim.prepare.ReduceScenario;
 import org.mjanowski.MySimConfig;
 
 import java.util.Collections;
@@ -17,15 +18,19 @@ public class MasterDelegateImpl implements MasterDelegate {
 
     private MasterMain masterMain;
     private MasterSim masterSim;
+    private CountDownLatch workersRegisteredLatch;
+    private boolean workersAssigned = false;
 
     @Inject
     public MasterDelegateImpl(Scenario scenario, Mobsim mobsim) {
+//        ReduceScenario.main(scenario, scenario.getConfig());
         MasterSim masterSim = (MasterSim) mobsim;
         MySimConfig mySimConfig = (MySimConfig) scenario.getConfig().getModules().get("mySimConfig");
+        workersRegisteredLatch = new CountDownLatch(mySimConfig.getWorkersNumber());
         this.masterSim = masterSim;
         masterSim.setMasterDelegate(this);
         masterSim.getEventsManager().initProcessing();
-        masterMain = new MasterMain(mySimConfig, scenario.getNetwork(), masterSim, this);
+        masterMain = new MasterMain(mySimConfig, scenario.getNetwork(), masterSim, this, scenario.getConfig());
     }
 
     @Override
@@ -47,13 +52,32 @@ public class MasterDelegateImpl implements MasterDelegate {
     public void sendReplanning(List<ReplanningDto> replanningDtos) {
         Lists.partition(replanningDtos, 100)
                 .forEach(r -> masterMain.sendReplanning(r, false));
-        masterMain.sendReplanning(Collections.emptyList(), true);
     }
 
     @Override
     public void terminateSystem() {
         System.out.println("terminateing actor system");
         masterMain.terminateSystem();
+    }
+
+    @Override
+    public void beforeMobsim() {
+        if (!workersAssigned) {
+            try {
+                workersRegisteredLatch.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            masterMain.sendWorkerAssignments();
+            workersAssigned = true;
+        } else {
+            masterMain.sendReplanning(Collections.emptyList(), true);
+        }
+    }
+
+    @Override
+    public void workerRegistered() {
+        workersRegisteredLatch.countDown();
     }
 
 

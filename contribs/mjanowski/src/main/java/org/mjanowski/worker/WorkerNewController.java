@@ -90,6 +90,10 @@ class WorkerNewController extends AbstractController implements ControlerI {
 
 	@Override
 	protected final void prepareForMobsim() {
+		WorkerSim workerSim = (WorkerSim) this.mobsimProvider.get();
+		workerSim.waitUntilReadyForIteration();
+		//todo to powinno się wykonać po replanningu dlatego to jest wyciągnięte.
+		//może można to jeszcze wyciągnać gdzieś wyżej
 		this.prepareForMobsim.run() ;
 //		this.prepareForSim.run() ;
 	}

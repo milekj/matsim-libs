@@ -24,12 +24,6 @@
             <url>https://jitpack.io</url>
         </repository>
         <repository>
-            <!-- Geotools is not on Maven central -->
-            <id>osgeo</id>
-            <name>Geotools repository</name>
-            <url>https://repo.osgeo.org/repository/release</url>
-        </repository>
-        <repository>
             <!-- Repository for MATSim releases (MATSim is not on Maven central) -->
             <id>matsim</id>
             <url>https://dl.bintray.com/matsim/matsim</url>
@@ -42,6 +36,7 @@
     </repositories>
 
     <dependencies>
+
         <dependency>
             <!-- This is the matsim "core": -->
             <groupId>org.matsim</groupId>
@@ -67,6 +62,12 @@
             <groupId>com.github.matsim-vsp</groupId>
             <artifactId>drt-speed-up</artifactId>
             <version>v0.0.3</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.geotools</groupId>
+                    <artifactId>gt-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -141,8 +142,13 @@
             <groupId>com.github.matsim-org</groupId>
             <artifactId>GTFS2MATSim</artifactId>
             <version>20cc145c34</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.geotools</groupId>
+                    <artifactId>gt-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
-
     </dependencies>
 
     <build>

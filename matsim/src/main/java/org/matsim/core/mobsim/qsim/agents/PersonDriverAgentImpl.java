@@ -172,6 +172,11 @@ public class PersonDriverAgentImpl implements MobsimDriverAgent, MobsimPassenger
 	}
 
 	@Override
+	public final void notifyVehicleDeparture(Id<Link> newLinkId, int personLinkIndex, int planIndex) {
+		driverAgentDelegate.notifyVehicleDeparture(newLinkId, personLinkIndex, planIndex);
+	}
+
+	@Override
 	public int getLinkIndex() {
 		return basicAgentDelegate.getCurrentLinkIndex();
 	}

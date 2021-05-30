@@ -30,6 +30,7 @@ import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.core.config.Config;
 import org.matsim.core.controler.ControlerListenerManager;
 import org.matsim.core.controler.listener.AfterMobsimListener;
 import org.matsim.core.controler.listener.ShutdownListener;
@@ -47,6 +48,8 @@ import org.matsim.core.mobsim.qsim.interfaces.Netsim;
 import org.matsim.core.mobsim.qsim.interfaces.NetsimNetwork;
 import org.matsim.core.mobsim.qsim.qnetsimengine.*;
 import org.matsim.core.population.PopulationUtils;
+import org.matsim.prepare.ReduceScenario;
+import org.matsim.run.RunLosAngelesScenario;
 import org.matsim.vis.snapshotwriters.VisData;
 import org.matsim.vis.snapshotwriters.VisMobsim;
 import org.matsim.vis.snapshotwriters.VisNetwork;
@@ -98,9 +101,12 @@ public final class WorkerSim extends Thread implements VisMobsim, Netsim, Activi
 
 	@Inject
 	private WorkerSim(final Scenario sc,
+					  Config config,
 					  EventsManager events,
 					  ControlerListenerManager controlerListenerManager,
 					  Population population) {
+		RunLosAngelesScenario.prepareScenario(sc, config);
+//		ReduceScenario.main(sc, config);
 		scenario = sc;
 		this.population = population;
 		controlerListenerManager.addControlerListener(
@@ -163,6 +169,10 @@ public final class WorkerSim extends Thread implements VisMobsim, Netsim, Activi
 		}).start();
 	}
 
+	public void waitUntilReadyForIteration() {
+		workerDelegate.waitUntilReadyForIteration();
+	}
+
 	@Override
 	public void run() {
 		workerDelegate.waitUntilReadyForIteration();
@@ -183,12 +193,16 @@ public final class WorkerSim extends Thread implements VisMobsim, Netsim, Activi
 		return qSim.acceptVehicles(workerId, moveVehicleDtos);
 	}
 
-	public void movingNodesFinished() {
-		workerDelegate.movingNodesFinished();
+	public void handleVehicleDeparture(DepartVehicleDto departVehicleDto) {
+		qSim.handleVehicleDeparture(departVehicleDto);
 	}
 
-	public void readyForNextStep(boolean finished) {
-		workerDelegate.readyForNextStep(finished);
+	public void movingNodesFinished(boolean workerFinished) {
+		workerDelegate.movingNodesFinished(workerFinished);
+	}
+
+	public void readyForNextStep(boolean readyToFinishWithNeighbours) {
+		workerDelegate.readyForNextStep(readyToFinishWithNeighbours);
 	}
 
 	@Override

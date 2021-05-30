@@ -24,6 +24,7 @@ import com.google.inject.Injector;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.core.config.Config;
 import org.matsim.core.controler.ControlerListenerManager;
 import org.matsim.core.controler.listener.ReplanningListener;
 import org.matsim.core.controler.listener.ShutdownListener;
@@ -31,6 +32,8 @@ import org.matsim.core.mobsim.framework.MobsimTimer;
 import org.matsim.core.mobsim.framework.listeners.MobsimListener;
 import org.matsim.core.mobsim.qsim.MasterDelegate;
 import org.matsim.core.mobsim.qsim.interfaces.*;
+import org.matsim.prepare.ReduceScenario;
+import org.matsim.run.RunLosAngelesScenario;
 import org.mjanowski.MySimConfig;
 
 import javax.inject.Inject;
@@ -87,9 +90,11 @@ public final class MasterSim implements Netsim {
 	 */
 	@Inject
 	private MasterSim(final Scenario sc,
+					  Config config,
 					  EventsManager events,
 					  Injector childInjector,
 					  ControlerListenerManager controlerListenerManager) {
+		RunLosAngelesScenario.prepareScenario(sc, config);
 		this.scenario = sc;
 		this.events = events;
 		this.controlerListenerManager = controlerListenerManager;
@@ -106,6 +111,10 @@ public final class MasterSim implements Netsim {
 					events.initProcessing();
 				}
 		);
+	}
+
+	public MasterDelegate getMasterDelegate() {
+		return masterDelegate;
 	}
 
 	@Override

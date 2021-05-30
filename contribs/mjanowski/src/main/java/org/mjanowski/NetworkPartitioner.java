@@ -1,21 +1,31 @@
 package org.mjanowski;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.*;
 import jnr.ffi.annotations.In;
 import org.graphstream.graph.implementations.SingleGraph;
-import org.graphstream.stream.file.FileSink;
-import org.graphstream.stream.file.FileSinkDOT;
-import org.graphstream.stream.file.FileSinkSVG;
-import org.graphstream.stream.file.FileSinkSVG2;
+import org.graphstream.stream.file.*;
 import org.graphstream.ui.view.Viewer;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigGroup;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.prepare.ReduceScenario;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -25,12 +35,57 @@ import java.util.stream.Stream;
 public class NetworkPartitioner {
 
     private final Network network;
+    private final Config config;
 
-    public NetworkPartitioner(Network network) {
+    public NetworkPartitioner(Network network, Config config) {
         this.network = network;
+        this.config = config;
     }
 
     public Map<Integer, Partition> partition(int partitionsNumber) {
+
+        URL partitionFileUrl = ConfigGroup.getInputFileURL(this.config.getContext(), "part.results.part." + partitionsNumber);
+        String partitionFilePath = partitionFileUrl.getFile();
+        if (Files.exists(Paths.get(partitionFilePath))) {
+
+            try {
+                Map<Id<Node>, ? extends Node> nodes = network.getNodes();
+                URL intIdsFileUrl = ConfigGroup.getInputFileURL(this.config.getContext(), "intIds");
+                FileReader idsReader = new FileReader(intIdsFileUrl.getFile());
+                ObjectMapper objectMapper = new ObjectMapper();
+                Map<String, Integer> readIntIds = objectMapper.readValue(idsReader, new TypeReference<>() {});
+
+                HashBiMap<String, Integer> intIds = HashBiMap.create(readIntIds);
+                BiMap<Integer, String> stringIds = intIds.inverse();
+                BufferedReader reader = new BufferedReader(new FileReader(partitionFilePath));
+
+
+                HashMultimap<Integer, String> nodePartitions = HashMultimap.create();
+                int index = 1;
+                String line = reader.readLine();
+                while (line != null) {
+                    int partitionNumber = Integer.parseInt(line);
+                    String nodeId = stringIds.get(index);
+                    nodePartitions.put(partitionNumber, nodeId);
+                    line = reader.readLine();
+                    index++;
+                }
+
+                Map<Integer, Partition> result = nodePartitions.asMap().entrySet()
+                        .stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> {
+                            List<Node> partitionNodes = e.getValue().stream().map(Id::createNodeId).map(nodes::get).collect(Collectors.toList());
+                            return new Partition(0, partitionNodes);
+                        }));
+                saveGraph(result);
+                return result;
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+
+        }
+
+
         Map<Id<Node>, ? extends Node> nodes = network.getNodes();
         int nodesNumber = nodes.size();
         int nodesPerPartition = nodesNumber / partitionsNumber;
@@ -78,6 +133,12 @@ public class NetworkPartitioner {
             }
         }
 
+        saveGraph(partitions);
+
+        return partitions;
+    }
+
+    private void saveGraph(Map<Integer, Partition> partitions) {
         List<String> colours = Arrays.asList("#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6",
         "#bfef45", "#fabed4", "#469990", "#dcbeff", "#9A6324", "#fffac8", "#800000", "#aaffc3", "#808000",
         "#ffd8b1", "#000075", "#a9a9a9", "#000000");
@@ -109,15 +170,12 @@ public class NetworkPartitioner {
             }
         }
 
-            try {
-            FileWriter fileWriter = new FileWriter("graph.svg");
-            FileSink fs = new FileSinkSVG2();
-            fs.writeAll(displayGraph, fileWriter);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return partitions;
+        try {
+        FileSink fs = new FileSinkImages(FileSinkImages.OutputType.PNG, FileSinkImages.Resolutions.UHD_4K);
+        fs.writeAll(displayGraph, "graph.png");
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
     }
 
     public Map<Integer, Collection<String>> partitionsToWorkersIds(Map<Integer, Partition> partitions) {

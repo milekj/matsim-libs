@@ -126,6 +126,7 @@ final class QNetsimEngineWithThreadpool extends AbstractQNetsimEngine<QNetsimEng
 			workerDelegate.initializeForNextStep();
 			workerDelegate.sendReadyForNextStep();
 			workerDelegate.waitUntilReadyForNextStep();
+			workerDelegate.checkIfShouldFinish();
 
 		} catch (InterruptedException e) {
 			throw new RuntimeException(e) ;

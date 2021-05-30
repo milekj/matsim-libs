@@ -131,6 +131,7 @@ public final class DefaultTeleportationEngine implements TeleportationEngine {
 			Tuple<Double, MobsimAgent> entry = teleportationList.peek();
 			if (entry.getFirst() <= now) {
 				teleportationList.poll();
+				//TODO teleportacja na razie może nie działać
 				MobsimAgent personAgent = entry.getSecond();
 				personAgent.notifyArrivalOnLinkByNonNetworkMode(personAgent
 						.getDestinationLinkId());

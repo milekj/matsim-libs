@@ -3,21 +3,20 @@ package org.mjanowski.master
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorSystem, LogOptions}
 import com.typesafe.config.ConfigFactory
-import org.apache.log4j.Logger
 import org.matsim.api.core.v01.network.Network
+import org.matsim.core.config.Config
 import org.matsim.core.mobsim.qsim.MasterDelegate
 import org.matsim.core.mobsim.qsim.qnetsimengine.ReplanningDto
 import org.mjanowski.MySimConfig
 import org.mjanowski.worker.SendAfterSimStep
-import org.slf4j.event.Level
 
 import scala.jdk.CollectionConverters.ListHasAsScala
 
-class MasterMain(config: MySimConfig, network: Network, masterSim: MasterSim, masterDelegate: MasterDelegate) {
+class MasterMain(mySimConfig: MySimConfig, network: Network, masterSim: MasterSim, masterDelegate: MasterDelegate, config: Config) {
 
-  val host = config.getMasterAddress
-  val port = config.getMasterPort
-  val workersNumber = config.getWorkersNumber
+  val host = mySimConfig.getMasterAddress
+  val port = mySimConfig.getMasterPort
+  val workersNumber = mySimConfig.getWorkersNumber
   val addressConfig =
     s"""akka.remote.artery.canonical.hostname=${host}
           akka.remote.artery.canonical.port=${port}
@@ -25,9 +24,10 @@ class MasterMain(config: MySimConfig, network: Network, masterSim: MasterSim, ma
   val akkaConfig = ConfigFactory.parseString(addressConfig)
     .withFallback(ConfigFactory.load())
   val actorSystem = ActorSystem(
-    SimMasterActor(workersNumber, network, masterDelegate),
+    SimMasterActor(workersNumber, network, masterDelegate, config),
     "system",
     akkaConfig)
+
 //val actorSystem = ActorSystem(
 //  Behaviors.logMessages(LogOptions().withLevel(Level.INFO), SimMasterActor(workersNumber, network, masterSim)),
 //  "system",
@@ -35,6 +35,10 @@ class MasterMain(config: MySimConfig, network: Network, masterSim: MasterSim, ma
 
   def sendReplanning(replanningDtos: java.util.List[ReplanningDto], last: Boolean) : Unit = {
     actorSystem ! SendReplanning(replanningDtos.asScala.toSeq, last)
+  }
+
+  def sendWorkerAssignments(): Unit = {
+    actorSystem ! SendWorkerAssignments()
   }
 
   def terminateSystem(): Unit = {

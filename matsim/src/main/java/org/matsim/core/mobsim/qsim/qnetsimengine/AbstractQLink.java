@@ -140,6 +140,9 @@ abstract class AbstractQLink implements QLinkI {
 	 */
 	private void activateLink() {
 		if (!this.active) {
+			if (netElementActivationRegistry == null) {
+				System.out.println("o nie");
+			}
 			netElementActivationRegistry.registerLinkAsActive(this);
 			this.active = true;
 		}

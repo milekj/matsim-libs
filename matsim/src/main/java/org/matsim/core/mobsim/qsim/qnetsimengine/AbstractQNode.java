@@ -92,6 +92,9 @@ abstract class AbstractQNode implements QNodeI {
 		 * true, the value is changed to true and the activator is informed.
 		 */
 		if (this.active.compareAndSet(false, true)) {
+			if (this.activator == null) {
+				System.out.println("ojejej");
+			}
 			this.activator.registerNodeAsActive(this);
 		}
 	}

@@ -1,13 +1,14 @@
 package org.mjanowski.worker
 
+import java.util
+
 import akka.actor.typed.receptionist.Receptionist
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import org.mjanowski.master._
 
-import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.collection.mutable
-import scala.jdk.CollectionConverters.{CollectionHasAsScala, MapHasAsScala, SeqHasAsJava}
+import scala.jdk.CollectionConverters.{CollectionHasAsScala, MapHasAsJava, SetHasAsJava}
 
 object SimWorkerActor {
 
@@ -19,6 +20,7 @@ object SimWorkerActor {
   var workerId: Int = _
   var canStartIteration: Boolean = false
   var assigned: Boolean = false
+  val workerNodesIds: mutable.MultiDict[Int, String] = mutable.MultiDict()
 
   def apply(workerSim: WorkerSim): Behavior[WorkerCommand] = {
     SimWorkerActor.workerSim = workerSim
@@ -36,21 +38,48 @@ object SimWorkerActor {
           })
           Behaviors.same
 
-        case AssignNodes(workerId, workersNodesIds, workersRefs, workerConnections) =>
-          SimWorkerActor.workerRefs = workersRefs
-          println("hura")
-          println(workerId, workersRefs, workerConnections)
-          this.workerId = workerId
-          workerSim.setWorkerId(workerId)
-          workerSim.setPartitions(workersNodesIds)
-          workerSim.setConnections(workerConnections)
-          this.workerConnections = workerConnections.asScala.map(wid => workersRefs(wid))
+        case AssignNodes(workerId, workersNodesIds, workersRefs, workerConnections, last) =>
+//          println(workerId, workersNodesIds, workersRefs)
 
-          println("assigned = true")
-          assigned = true
-          if (canStartIteration)
-            workerSim.runIteration()
+          if (last) {
+            SimWorkerActor.workerRefs = workersRefs
+            val javaWorkersNodesId: Map[Integer, util.Collection[String]] =
+              SimWorkerActor.workerNodesIds.sets.map({ case (k, v) => (Integer.valueOf(k), v.asJava) })
+                .toMap
+            println("hura")
+            this.workerId = workerId
+            workerSim.setWorkerId(workerId)
+            workerSim.setPartitions(javaWorkersNodesId.asJava)
+            workerSim.setConnections(workerConnections)
+            this.workerConnections = workerConnections.asScala.map(wid => workersRefs(wid))
+
+            println("assigned = true")
+            println(Thread.currentThread().getName());
+            assigned = true
+            if (canStartIteration)
+              workerSim.runIteration()
+          } else {
+            workersNodesIds.foreach({
+              case (wid, nodes) =>
+                nodes.foreach(n => SimWorkerActor.workerNodesIds.addOne((wid, n)))
+            })
+          }
           Behaviors.same
+
+        //          SimWorkerActor.workerRefs = workersRefs
+//          println("hura")
+//          println(workerId, workersRefs, workerConnections)
+//          this.workerId = workerId
+//          workerSim.setWorkerId(workerId)
+//          workerSim.setPartitions(workersNodesIds)
+//          workerSim.setConnections(workerConnections)
+//          this.workerConnections = workerConnections.asScala.map(wid => workersRefs(wid))
+//
+//          println("assigned = true")
+//          assigned = true
+//          if (canStartIteration)
+//            workerSim.runIteration()
+//          Behaviors.same
 
         case StartIteration() =>
           println("canStartIteration = true")
@@ -70,21 +99,30 @@ object SimWorkerActor {
           context.spawn(UpdateActor(workerSim), "update" + System.nanoTime()) ! m
           Behaviors.same
 
-        case SendMovingNodesFinished() =>
-          workerConnections.foreach(w => w ! MovingNodesFinished())
+        case SendVehicleDeparture(workerId, departVehicleDto) =>
+
+          SimWorkerActor.workerRefs(workerId) ! VehicleDeparture(departVehicleDto)
+          Behaviors.same
+
+        case VehicleDeparture(departVehicleDto) =>
+          workerSim.handleVehicleDeparture(departVehicleDto);
+          Behaviors.same
+
+        case SendMovingNodesFinished(readyToFinish) =>
+          workerConnections.foreach(w => w ! MovingNodesFinished(readyToFinish))
 
           Behaviors.same
 
-        case MovingNodesFinished() =>
-          workerSim.movingNodesFinished()
+        case MovingNodesFinished(readyToFinish) =>
+          workerSim.movingNodesFinished(readyToFinish)
           Behaviors.same
 
-        case SendReadyForNextStep(finished) =>
-          workerConnections.foreach(w => w ! ReadyForNextStep(finished))
+        case SendReadyForNextStep(readyToFinishWithNeighbours) =>
+          workerConnections.foreach(w => w ! ReadyForNextStep(readyToFinishWithNeighbours))
           Behaviors.same
 
-        case ReadyForNextStep(finished) =>
-          workerSim.readyForNextStep(finished)
+        case ReadyForNextStep(readyToFinishWithNeighbours) =>
+          workerSim.readyForNextStep(readyToFinishWithNeighbours)
           Behaviors.same
 
         case SendEvents(events) =>
@@ -101,8 +139,8 @@ object SimWorkerActor {
           Behaviors.same
 
         case Replanning(replanningDtos, last) =>
-//          println("Received replanning " + last)
-          SimWorkerActor.workerSim.handleReplanning(replanningDtos.asJava, last)
+//          Logger.getRootLogger.info("Received replanning " + last)
+          SimWorkerActor.workerSim.handleReplanning(replanningDtos, last)
           Behaviors.same
 
 

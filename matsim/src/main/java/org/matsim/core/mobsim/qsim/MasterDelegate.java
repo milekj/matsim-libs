@@ -16,4 +16,9 @@ public interface MasterDelegate {
     void sendReplanning(List<ReplanningDto> replanningDtos);
 
     void terminateSystem();
+
+    void beforeMobsim();
+
+    void workerRegistered();
+
 }

@@ -2,15 +2,16 @@ package org.mjanowski.worker
 
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.AskPattern.Askable
-import akka.actor.typed.scaladsl.Behaviors
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.matsim.api.core.v01.Id
 import org.matsim.api.core.v01.network.Node
-import org.matsim.core.mobsim.qsim.qnetsimengine.{AcceptedVehiclesDto, EventDto, MoveVehicleDto}
+import org.matsim.core.mobsim.qsim.qnetsimengine.{AcceptedVehiclesDto, DepartVehicleDto, EventDto, MoveVehicleDto}
 import org.mjanowski.MySimConfig
-
 import java.util
+
+import akka.actor.typed.scaladsl.Behaviors
+
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, Future}
 import scala.jdk.CollectionConverters.{ListHasAsScala, MapHasAsScala}
@@ -18,12 +19,13 @@ import scala.reflect.ClassTag
 
 class WorkerMain(config: MySimConfig, workerSim: WorkerSim) {
 
-  private val host = config.getMasterAddress
-  private val port = config.getMasterPort
+  private val masterHost = config.getMasterAddress
+  private val masterPort = config.getMasterPort
+  private val workerHost = config.getWorkerAddress
   private val addressConfig =
-    s"""akka.remote.artery.canonical.hostname=0.0.0.0
+    s"""akka.remote.artery.canonical.hostname=${workerHost}
           akka.remote.artery.canonical.port=0
-          akka.cluster.seed-nodes = ["akka://system@${host}:${port}"]"""
+          akka.cluster.seed-nodes = ["akka://system@${masterHost}:${masterPort}"]"""
   private val akkaConfig = ConfigFactory.parseString(addressConfig)
     .withFallback(ConfigFactory.load())
 //  private val actorSystem = ActorSystem(Behaviors.logMessages(SimWorkerActor(workerSim)), "system", akkaConfig)
@@ -59,8 +61,8 @@ class WorkerMain(config: MySimConfig, workerSim: WorkerSim) {
     actorSystem ! SendMovingNodesFinished()
   }
 
-  def sendReadyForNextMoving(finished: Boolean): Unit = {
-    actorSystem ! SendReadyForNextStep(finished)
+  def sendReadyForNextMoving(readyToFinishWithNeighbours: Boolean): Unit = {
+    actorSystem ! SendReadyForNextStep(readyToFinishWithNeighbours)
   }
 
   def terminateSystem(): Unit = {

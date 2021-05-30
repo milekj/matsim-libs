@@ -163,6 +163,7 @@
 		<module>locationchoice</module>
 		<module>matrixbasedptrouter</module>
 		<module>minibus</module>
+		<module>mjanowski</module>
 		<module>multimodal</module>
 		<module>noise</module>
 		<module>osm</module>

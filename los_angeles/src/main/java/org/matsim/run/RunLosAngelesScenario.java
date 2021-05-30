@@ -18,10 +18,9 @@
  * *********************************************************************** */
 package org.matsim.run;
 
-import static org.matsim.core.config.groups.ControlerConfigGroup.RoutingAlgorithmType.FastAStarLandmarks;
-
-import java.util.Arrays;
-
+import ch.sbb.matsim.config.SwissRailRaptorConfigGroup;
+import ch.sbb.matsim.routing.pt.raptor.RaptorIntermodalAccessEgress;
+import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
@@ -33,18 +32,17 @@ import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
 import org.matsim.core.config.groups.QSimConfigGroup.TrafficDynamics;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.AbstractModule;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.AllowsConfiguration;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.router.MainModeIdentifier;
-import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.parkingCost.ParkingCostConfigGroup;
 import org.matsim.parkingCost.ParkingCostModule;
 
-import ch.sbb.matsim.config.SwissRailRaptorConfigGroup;
-import ch.sbb.matsim.routing.pt.raptor.RaptorIntermodalAccessEgress;
-import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
+import java.util.Arrays;
+
+import static org.matsim.core.config.groups.ControlerConfigGroup.RoutingAlgorithmType.FastAStarLandmarks;
 
 /**
  * @author nagel, ikaddoura
@@ -53,24 +51,21 @@ import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 public class RunLosAngelesScenario {
 	private static final Logger log = Logger.getLogger(RunLosAngelesScenario.class );
 
-	public static void main(String[] args) {
-		
-		for (String arg : args) {
-			log.info( arg );
-		}
-				
-		Config config = prepareConfig( args ) ;
-		Scenario scenario = prepareScenario( config ) ;
-		Controler controler = prepareControler( scenario ) ;
-		controler.run() ;
-	}
-	
-	public static Controler prepareControler( Scenario scenario ) {		
-		Gbl.assertNotNull(scenario);
-		
-		final Controler controler = new Controler( scenario );
-		
-		if (controler.getConfig().transit().isUsingTransitInMobsim()) {
+//	public static void main(String[] args) {
+//
+//		for (String arg : args) {
+//			log.info( arg );
+//		}
+//
+//		Config config = prepareConfig( args ) ;
+//		Scenario scenario = prepareScenario( config ) ;
+//		Controler controler = prepareControler( scenario ) ;
+//		controler.run() ;
+//	}
+
+	public static void prepareControler( AllowsConfiguration controler, Config config ) {
+
+		if (config.transit().isUsingTransitInMobsim()) {
 			// use the sbb pt raptor router
 			controler.addOverridingModule( new AbstractModule() {
 				@Override
@@ -83,22 +78,22 @@ public class RunLosAngelesScenario {
 					+ "This will have a significant effect on pt-related parameters (travel times, modal split, and so on). "
 					+ "Should only be used for testing or car-focused studies with a fixed modal split.  ");
 		}
-		
+
 		// use the (congested) car travel time for the teleported ride modes
 		controler.addOverridingModule( new AbstractModule() {
 			@Override
 			public void install() {
 				addTravelTimeBinding( TransportMode.ride ).to( networkTravelTime() );
 				addTravelDisutilityFactoryBinding( TransportMode.ride ).to( carTravelDisutilityFactoryKey() );
-				
+
 				addTravelTimeBinding( "ride_taxi" ).to( networkTravelTime() );
 				addTravelDisutilityFactoryBinding( "ride_taxi" ).to( carTravelDisutilityFactoryKey() );
-				
+
 				addTravelTimeBinding( "ride_school_bus" ).to( networkTravelTime() );
 				addTravelDisutilityFactoryBinding( "ride_school_bus" ).to( carTravelDisutilityFactoryKey() );
 			}
 		} );
-		
+
 		// use scoring parameters for intermodal PT routing
 		controler.addOverridingModule( new AbstractModule() {
 			@Override
@@ -106,7 +101,7 @@ public class RunLosAngelesScenario {
 				bind(RaptorIntermodalAccessEgress.class).to(LosAngelesRaptorIntermodalAccessEgress.class);
 			}
 		} );
-		
+
 		// use our own Analysis(Main-)ModeIdentifier
 		controler.addOverridingModule( new AbstractModule() {
 			@Override
@@ -117,72 +112,66 @@ public class RunLosAngelesScenario {
 				bind(AnalysisMainModeIdentifier.class).to(LosAngelesIntermodalPtDrtRouterAnalysisModeIdentifier.class);
 			}
 		} );
-		
+
 		// use income dependent marginal utility of money
-		LosAngelesPlanScoringFunctionFactory initialPlanScoringFunctionFactory = new LosAngelesPlanScoringFunctionFactory(controler.getScenario());
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
-				this.bindScoringFunctionFactory().toInstance(initialPlanScoringFunctionFactory);
+				this.bindScoringFunctionFactory().to(LosAngelesPlanScoringFunctionFactory.class);
 			}
 		});
-		
-		// use parking cost module
-		controler.addOverridingModule(new ParkingCostModule());
 
-		return controler;
+		// use parking cost module
+//		controler.addOverridingModule(new ParkingCostModule());
+
 	}
-	
-	public static Scenario prepareScenario( Config config ) {
+
+	public static void prepareScenario(Scenario scenario, Config config) {
 		Gbl.assertNotNull( config );
-		final Scenario scenario = ScenarioUtils.loadScenario( config );
-		
 		// make sure we start with selected plans only
 		for( Person person : scenario.getPopulation().getPersons().values() ){
 			person.getPlans().removeIf( (plan) -> plan!=person.getSelectedPlan() ) ;
 		}
-		
-		return scenario;
 	}
-	
+
 	public static Config prepareConfig(String [] args, ConfigGroup... customModules) {
 		OutputDirectoryLogging.catchLogEntries();
-		
+
 		String[] typedArgs = Arrays.copyOfRange( args, 1, args.length );
-		
+
 		ConfigGroup[] customModulesToAdd = new ConfigGroup[]{ new SwissRailRaptorConfigGroup(), new ParkingCostConfigGroup() };
 		ConfigGroup[] customModulesAll = new ConfigGroup[customModules.length + customModulesToAdd.length];
-		
+
 		int counter = 0;
 		for (ConfigGroup customModule : customModules) {
 			customModulesAll[counter] = customModule;
 			counter++;
 		}
-		
+
 		for (ConfigGroup customModule : customModulesToAdd) {
 			customModulesAll[counter] = customModule;
 			counter++;
 		}
-		
+
 		final Config config = ConfigUtils.loadConfig( args[ 0 ], customModulesAll );
-		
+
 		config.controler().setRoutingAlgorithmType( FastAStarLandmarks );
-		
+
 		config.subtourModeChoice().setProbaForRandomSingleTripMode( 0.5 );
-		
+
 		config.plansCalcRoute().setRoutingRandomness( 3. );
 //		config.plansCalcRoute().removeModeRoutingParams(TransportMode.ride); // since we are using the (congested) car travel time
 //		config.plansCalcRoute().removeModeRoutingParams(TransportMode.pt); // since we are using simulated public transit
 		config.plansCalcRoute().removeModeRoutingParams("undefined"); // since we don't have such a mode
-	
+
 		config.qsim().setInsertingWaitingVehiclesBeforeDrivingVehicles( true );
-				
+
 		// vsp defaults
 		config.vspExperimental().setVspDefaultsCheckingLevel( VspExperimentalConfigGroup.VspDefaultsCheckingLevel.abort );
 		config.plansCalcRoute().setInsertingAccessEgressWalk( true );
 		config.qsim().setUsingTravelTimeCheckInTeleportation( true );
-		config.qsim().setTrafficDynamics( TrafficDynamics.kinematicWaves );
-				
+		config.qsim().setTrafficDynamics( TrafficDynamics.queue );
+
 		// activities:
 		for ( long ii = 600 ; ii <= 97200; ii+=600 ) {
 			config.planCalcScore().addActivityParams( new ActivityParams( "home_" + ii ).setTypicalDuration( ii ) );
@@ -209,14 +198,14 @@ public class RunLosAngelesScenario {
 			config.planCalcScore().addActivityParams( new ActivityParams( "atworkbusiness_" + ii ).setTypicalDuration( ii ) );
 			config.planCalcScore().addActivityParams( new ActivityParams( "atworklunch_" + ii ).setTypicalDuration( ii ) );
 			config.planCalcScore().addActivityParams( new ActivityParams( "atworkother_" + ii ).setTypicalDuration( ii ) );
-			config.planCalcScore().addActivityParams( new ActivityParams( "business_" + ii ).setTypicalDuration( ii ) );	
+			config.planCalcScore().addActivityParams( new ActivityParams( "business_" + ii ).setTypicalDuration( ii ) );
 		}
 		config.planCalcScore().addActivityParams( new ActivityParams( "freightStart" ).setTypicalDuration( 12.*3600. ) );
 		config.planCalcScore().addActivityParams( new ActivityParams( "freightEnd" ).setTypicalDuration( 12.*3600. ) );
 
-		ConfigUtils.applyCommandline( config, typedArgs ) ;
+//		ConfigUtils.applyCommandline( config, typedArgs ) ;
 
 		return config ;
 	}
-	
+
 }

@@ -62,6 +62,10 @@ public interface DriverAgent extends Identifiable<Person>, NetworkAgent, Vehicle
 	default void myNotifyMoveOverNode(Id<Link> newLinkId, int personLinkIndex, int planIndex) {
 		throw new UnsupportedOperationException();
 	}
+
+	default void notifyVehicleDeparture(Id<Link> newLinkId, int personLinkIndex, int planIndex) {
+		throw new UnsupportedOperationException();
+	}
 	
 	public boolean isWantingToArriveOnCurrentLink( ) ;
 	
