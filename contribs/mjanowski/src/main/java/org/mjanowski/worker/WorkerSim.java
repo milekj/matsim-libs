@@ -117,7 +117,7 @@ public final class WorkerSim extends Thread implements VisMobsim, Netsim, Activi
 		);
 		controlerListenerManager.addControlerListener(
 				(ShutdownListener) event -> {
-					workerDelegate.terminateSystem();
+//					workerDelegate.terminateSystem();
 				}
 		);
 	}
@@ -188,9 +188,9 @@ public final class WorkerSim extends Thread implements VisMobsim, Netsim, Activi
 		//		workerDelegate.terminateSystem();
 	}
 
-	public List<AcceptedVehiclesDto> acceptVehicles(int workerId, List<MoveVehicleDto> moveVehicleDtos) {
+	public List<AcceptedVehiclesDto> acceptVehicles(int workerId, List<MoveVehicleDto> moveVehicleDtos, boolean stuck) {
 		//todo podział na wątki itd....
-		return qSim.acceptVehicles(workerId, moveVehicleDtos);
+		return qSim.acceptVehicles(workerId, moveVehicleDtos, stuck);
 	}
 
 	public void handleVehicleDeparture(DepartVehicleDto departVehicleDto) {

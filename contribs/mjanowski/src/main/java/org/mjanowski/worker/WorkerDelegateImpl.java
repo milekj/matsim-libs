@@ -53,13 +53,8 @@ public class WorkerDelegateImpl implements WorkerDelegate {
     }
 
     @Override
-    public List<AcceptedVehiclesDto> update(Integer workerId, List<MoveVehicleDto> moveVehicleDtos, double timeOfDay) {
-        return workerMain.update(workerId, moveVehicleDtos, timeOfDay);
-    }
-
-    @Override
-    public void accepted(Integer workerId, Map<Id<Node>, Collection<List<AcceptedVehiclesDto>>> accepted) {
-        workerMain.accepted(workerId, accepted);
+    public List<AcceptedVehiclesDto> update(Integer workerId, List<MoveVehicleDto> moveVehicleDtos, boolean stuck) {
+        return workerMain.update(workerId, moveVehicleDtos, stuck);
     }
 
     @Override

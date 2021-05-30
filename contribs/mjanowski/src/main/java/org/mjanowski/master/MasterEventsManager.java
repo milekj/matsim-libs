@@ -18,64 +18,72 @@ import java.util.stream.Collectors;
 
 public class MasterEventsManager implements EventsManager {
 
+    public static final Logger logger = Logger.getRootLogger();
     private final Runnable processingRunnable;
-    BlockingQueue<Double> stepsQueue;
+    BlockingDeque<Double> stepsQueue;
     Map<Double, CountDownLatch> stepFinishedLatches;
-    Map<Double, Queue<Event>> eventsQueues;
+    Map<Double, BlockingQueue<Event>> eventsQueues;
     private final int workersNumber;
     private Thread processingThread;
-
-    private EventsManager delegate;
+    private ParallelEventsManagerImpl delegate;
+    private ForkJoinPool forkJoinPool;
 
     @Inject
     public MasterEventsManager(Config config) {
         MySimConfig mySimConfig = (MySimConfig) config.getModules().get("mySimConfig");
         workersNumber = mySimConfig.getWorkersNumber();
-        ParallelEventHandlingConfigGroup eventHandlingConfig = config.parallelEventHandling();
-        int threadsNumber = eventHandlingConfig != null && eventHandlingConfig.getNumberOfThreads() != null
-                ? eventHandlingConfig.getNumberOfThreads() : 2;
 
-        delegate = new ParallelEventsManagerImpl(threadsNumber);
+        int eventsThreadsNumber = config.parallelEventHandling().getNumberOfThreads() - 1;
+
+        int poolThreadsNumber = config.global().getNumberOfThreads() - eventsThreadsNumber - 1;
+        forkJoinPool = new ForkJoinPool(poolThreadsNumber);
+
+        delegate = new ParallelEventsManagerImpl(eventsThreadsNumber);
         processingRunnable = () -> {
-            Logger.getRootLogger().info("Events thread started");
+            logger.info("Events thread started");
             while (!Thread.currentThread().isInterrupted()) {
 //                Logger.getRootLogger().info("Events thread loop");
+                Double step = null;
                 try {
 //                    Logger.getRootLogger().info("Events thread Waiting for stepsQueue");
-                    Double step = stepsQueue.take();
+                    step = stepsQueue.takeFirst();
 
                     if (step % 1000 == 0)
-                        Logger.getRootLogger().info("Processing events from step " + step);
+                        logger.info("Processing events from step " + step);
 //                    Logger.getRootLogger().info("Events thread Step taken from queue " + step);
                     CountDownLatch stepLatch = stepFinishedLatches.get(step);
                     stepLatch.await();
 //                    Logger.getRootLogger().info("Events thread Step ready " + step);
-                    Queue<Event> events = eventsQueues.get(step);
+                    BlockingQueue<Event> events = eventsQueues.get(step);
                     if (events == null) {
 //                        Logger.getRootLogger().info("Events thread no events to process for step " + step);
                         continue;
                     }
-                    events.forEach(e -> delegate.processEvent(e));
-                    eventsQueues.put(step, null);
+                    LinkedList<Event>  currentStepEvents = new LinkedList<>();
+                    events.drainTo(currentStepEvents);
+                    delegate.processEvents(currentStepEvents);
 //                    Logger.getRootLogger().info("Events thread in step processed " + step);
                 } catch (InterruptedException e) {
-//                    Logger.getRootLogger().info("Events thread interrupted");
+                    logger.info("Events thread interrupted, step: " + step, e);
+                    if (step != null)
+                        stepsQueue.addFirst(step);
                     break;
                 }
             }
-            Logger.getRootLogger().info("Events thread finished processing");
+            logger.info("Events thread finished processing");
         };
     }
 
     public void workerAfterSimStep(double step) {
-//        Logger.getRootLogger().info("Worker finished step " + step);
         CountDownLatch stepLatch = stepFinishedLatches.get(step);
-        if (stepLatch != null)
+        if (stepLatch != null) {
             stepLatch.countDown();
+//            logger.info("Counting down for: " + step);
+        }
         else {
             stepFinishedLatches.put(step, new CountDownLatch(workersNumber - 1));
-//            Logger.getLogger("Added to stepsQueue " + step);
-            stepsQueue.add(step);
+            stepsQueue.addLast(step);
+//            logger.info("New latch for: " + step);
         }
     }
 
@@ -83,16 +91,26 @@ public class MasterEventsManager implements EventsManager {
         if (eventsDtos.isEmpty())
             return;
         double time = eventsDtos.get(0).getTime();
-        eventsQueues.computeIfAbsent(time, t -> new LinkedList<>());
-        List<Event> events = eventsDtos.stream()
-                .map(EventsMapper::map)
-                .collect(Collectors.toList());
-        eventsQueues.get(time).addAll(events);
+        eventsQueues.computeIfAbsent(time, t -> new LinkedBlockingQueue<>());
+
+
+        try {
+            forkJoinPool.submit(() -> {
+                List<Event> events = eventsDtos.parallelStream()
+                        .map(EventsMapper::map)
+                        .collect(Collectors.toList());
+                eventsQueues.get(time).addAll(events);
+            }).get();
+        } catch (InterruptedException | ExecutionException e) {
+            logger.error("Exception while processing events batch", e);
+        }
+
     }
 
     @Override
     public void processEvent(Event event) {
-        Logger.getRootLogger().error("Process event called on MasterEventsManager");
+        logger.warn("Process event called on MasterEventsManager ");
+        //parking cos handler...
         //todo?
         //raczej nigdy to nie powinno być wołane
     }
@@ -119,11 +137,12 @@ public class MasterEventsManager implements EventsManager {
         if (processingThread != null)
             return;
         System.out.println("Not already init");
-        Logger.getRootLogger().info("Events processing started");
+        logger.info("Events processing started");
         delegate.initProcessing();
-        stepsQueue = new LinkedBlockingQueue<>();
+        stepsQueue = new LinkedBlockingDeque<>();
         stepFinishedLatches = new ConcurrentHashMap<>();
-        eventsQueues = new HashMap<>();
+        eventsQueues = new ConcurrentHashMap<>();
+        //todo
         processingThread = new Thread(processingRunnable);
         processingThread.start();
     }
@@ -147,32 +166,37 @@ public class MasterEventsManager implements EventsManager {
             e.printStackTrace();
         }
 
+//        logger.info("Remaining steps: " + stepsQueue.size());
+//        logger.info("First event: " + stepsQueue.peekFirst());
+//        logger.info("Last event: " + stepsQueue.peekLast());
         while (!stepsQueue.isEmpty()) {
             try {
-                Double step = stepsQueue.take();
-                System.out.println("Finishing for step: " + step);
+                Double step = stepsQueue.pollFirst();
                 if (step % 1000 == 0)
-                    Logger.getRootLogger().info("Processing events from step " + step);
+                    logger.info("Processing events from step " + step);
                 CountDownLatch stepLatch = stepFinishedLatches.get(step);
                 stepLatch.await();
-                Queue<Event> events = eventsQueues.get(step);
+//                logger.info("Processing events from step " + step);
+                BlockingQueue<Event> events = eventsQueues.get(step);
                 if (events == null) {
                     continue;
                 }
-                events.forEach(e -> delegate.processEvent(e));
-                eventsQueues.put(step, null);
+//                logger.info("After latch " + step);
+                LinkedList<Event>  currentStepEvents = new LinkedList<>();
+                events.drainTo(currentStepEvents);
+                delegate.processEvents(currentStepEvents);
             } catch (InterruptedException e) {
-                Logger.getRootLogger().error("interrupted - should not happen");
+                logger.error("interrupted - should not happen", e);
             }
         }
 
-        Object nonNull = eventsQueues.entrySet()
-                .stream()
-                .filter(e -> e.getValue() != null)
-//                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
+//        Object nonNull = eventsQueues.entrySet()
+//                .stream()
+//                .filter(e -> e.getValue() != null)
+////                .map(Map.Entry::getKey)
+//                .collect(Collectors.toList());
 
-        System.out.println("Remaining events = " + nonNull);
+//        System.out.println("Remaining events = " + nonNull);
 
         processingThread = null;
         delegate.finishProcessing();

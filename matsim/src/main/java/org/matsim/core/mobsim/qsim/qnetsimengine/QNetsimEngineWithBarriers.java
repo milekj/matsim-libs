@@ -102,7 +102,7 @@ final class QNetsimEngineWithBarriers extends AbstractQNetsimEngine<QNetsimEngin
 	}
 
 	@Override
-	public List<AcceptedVehiclesDto> acceptVehicles(int workerId, List<MoveVehicleDto> moveVehicleDtos) {
+	public List<AcceptedVehiclesDto> acceptVehicles(int workerId, List<MoveVehicleDto> moveVehicleDtos, boolean stuck) {
 		return null;
 	}
 

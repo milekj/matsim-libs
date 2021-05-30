@@ -62,7 +62,7 @@ object SimMasterActor {
 
           //todo just checking for debug
 
-          val times = events.map(e => e.getTime).distinct
+//          val times = events.map(e => e.getTime).distinct
 
 //          if (events.map(e => e.getTime).distinct.size > 1)
 //            Logger.getRootLogger.error("Multiple event times in a batch!!!" + times)
@@ -92,6 +92,10 @@ object SimMasterActor {
         case SendReplanning(replanningDtos, last) =>
           workers.values.foreach(w => w ! Replanning(replanningDtos, last))
           Behaviors.same
+
+        case TerminateSystem() =>
+          workers.values.foreach(w => w ! worker.TerminateSystem())
+          Behaviors.stopped
 
       }
     })

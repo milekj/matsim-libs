@@ -23,6 +23,7 @@ import java.lang.InterruptedException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.matsim.api.core.v01.events.Event;
@@ -45,7 +46,7 @@ import org.matsim.core.gbl.Gbl;
 			final int preInputBufferMaxLength) {
 		this.events = events;
 		this.preInputBufferMaxLength = preInputBufferMaxLength;
-		eventQueue = new LinkedBlockingQueue<Event>();
+		eventQueue = new LinkedBlockingDeque<>();
 		preInputBuffer = new ArrayList<Event>( preInputBufferMaxLength + 1);
 	}
 

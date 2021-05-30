@@ -38,11 +38,9 @@ interface QNodeI extends NetsimNode {
 
 	boolean doSimStep(double now) ;
 
-	List<AcceptedVehiclesDto> acceptVehicles(List<MoveVehicleDto> moveVehicleDtos, boolean local);
+	List<AcceptedVehiclesDto> acceptVehicles(List<MoveVehicleDto> moveVehicleDtos, boolean local, boolean stuck);
 
 	void init() ;
 
-	Map<Id<Link>, List<AcceptedVehiclesDto>> acceptVehiclesLocal(List<MoveVehicleDto> moveVehicleDtos);
-
-	void handleAccepted(List<AcceptedVehiclesDto> accepted);
+    void handleAccepted(List<AcceptedVehiclesDto> accepted);
 }

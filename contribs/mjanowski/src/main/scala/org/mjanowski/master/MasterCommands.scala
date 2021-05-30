@@ -9,7 +9,7 @@ sealed trait MasterCommand extends MySerializable
 
 case class RegisterWorker(replyTo: ActorRef[WorkerCommand]) extends MasterCommand
 
-case class Events(events: Seq[EventDto], sender: ActorRef[WorkerCommand]) extends MasterCommand
+case class Events(events: java.util.List[EventDto], sender: ActorRef[WorkerCommand]) extends MasterCommand
 
 case class AfterMobsim() extends MasterCommand
 

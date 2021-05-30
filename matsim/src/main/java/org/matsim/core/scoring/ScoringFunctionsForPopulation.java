@@ -90,6 +90,7 @@ import static org.matsim.core.router.TripStructureUtils.Trip;
 	private final IdMap<Person, Plan> tripRecords = new IdMap<>(Person.class);
 	
 	private Vehicle2DriverEventHandler vehicles2Drivers = new Vehicle2DriverEventHandler();
+	private Logger logger = Logger.getRootLogger();
 
 	@Inject
 	ScoringFunctionsForPopulation( ControlerListenerManager controlerListenerManager, EventsManager eventsManager, EventsToActivities eventsToActivities, EventsToLegs eventsToLegs,
@@ -142,11 +143,11 @@ import static org.matsim.core.router.TripStructureUtils.Trip;
 
 		// Establish and end connection between driver and vehicle
 		if (o instanceof VehicleEntersTrafficEvent) {
-			Logger.getRootLogger().debug("Entering traffic " + ((VehicleEntersTrafficEvent) o).getPersonId());
+//			logger.info("Entering traffic " + o);
 			this.vehicles2Drivers.handleEvent((VehicleEntersTrafficEvent) o);
 		}
 		if (o instanceof VehicleLeavesTrafficEvent) {
-			Logger.getRootLogger().debug("Leaving traffic " + ((VehicleLeavesTrafficEvent) o).getPersonId());
+//			logger.info("Leaving traffic " + o);
 			this.vehicles2Drivers.handleEvent((VehicleLeavesTrafficEvent) o);
 		}
 		// Pass LinkEnterEvent to person scoring, required e.g. for bicycle where link attributes are observed in scoring
@@ -172,7 +173,7 @@ import static org.matsim.core.router.TripStructureUtils.Trip;
 					scoringFunction.handleEvent(o);
 				}
 			} catch (NullPointerException e ) {
-				Logger.getRootLogger().error("Null for event + " + o);
+				logger.error("Null for event + " + o);
 			}
 			// (this will NOT do the scoring function lookup twice since LinkEnterEvent is not an instance of HasPersonId.  kai, mar'17)
 

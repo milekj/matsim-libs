@@ -20,20 +20,12 @@
 
 package org.matsim.core.mobsim.qsim.qnetsimengine;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
-import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.mobsim.qsim.QSim;
-import org.matsim.core.mobsim.qsim.WorkerDelegate;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.stream.Collectors;
 
 /**
  * These are the "threads" of the {@link QNetsimEngineWithThreadpool}. The "run()" method is implicitly called by starting the thread.
@@ -109,12 +101,12 @@ abstract class AbstractQNetsimEngineRunner extends NetElementActivationRegistry 
 		this.lockNodes = false;
 	}
 
-	public List<AcceptedVehiclesDto> acceptVehicles(List<MoveVehicleDto> moveVehicleDtos) {
+	public List<AcceptedVehiclesDto> acceptVehicles(List<MoveVehicleDto> moveVehicleDtos, boolean stuck) {
 		if (moveVehicleDtos.isEmpty())
 			return Collections.emptyList();
 		MoveVehicleDto firstVeh = moveVehicleDtos.get(0);
 		QLinkI qlink = (QLinkI) qSim.getNetsimNetwork().getNetsimLink(firstVeh.getToLinkId());
-		return qlink.getToNode().acceptVehicles(moveVehicleDtos, false);
+		return qlink.getToNode().acceptVehicles(moveVehicleDtos, false, stuck);
 	}
 	
 	protected final void moveLinks() {

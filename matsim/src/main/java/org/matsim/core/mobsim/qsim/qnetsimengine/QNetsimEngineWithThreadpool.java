@@ -25,7 +25,6 @@ import java.util.concurrent.*;
 
 import javax.inject.Inject;
 
-import org.apache.log4j.Logger;
 import org.matsim.core.mobsim.qsim.QSim;
 import org.matsim.core.mobsim.qsim.WorkerDelegate;
 
@@ -136,7 +135,7 @@ final class QNetsimEngineWithThreadpool extends AbstractQNetsimEngine<QNetsimEng
 	}
 
 	@Override
-	public List<AcceptedVehiclesDto> acceptVehicles(int workerId, List<MoveVehicleDto> moveVehicleDtos) {
+	public List<AcceptedVehiclesDto> acceptVehicles(int workerId, List<MoveVehicleDto> moveVehicleDtos, boolean stuck) {
 		//todo tutaj oddzielna pula do tego itd...
 		//todo to jest wszystko do przerobienia, na razie tmp
 		//bo przychodzą wiadomości zanim engines się zainicjalizuje
@@ -146,7 +145,7 @@ final class QNetsimEngineWithThreadpool extends AbstractQNetsimEngine<QNetsimEng
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		return getQnetsimEngineRunner().get(0).acceptVehicles(moveVehicleDtos);
+		return getQnetsimEngineRunner().get(0).acceptVehicles(moveVehicleDtos, stuck);
 	}
 
 	private static class NamedThreadFactory implements ThreadFactory {

@@ -34,7 +34,7 @@ class MasterMain(mySimConfig: MySimConfig, network: Network, masterSim: MasterSi
 //  akkaConfig)
 
   def sendReplanning(replanningDtos: java.util.List[ReplanningDto], last: Boolean) : Unit = {
-    actorSystem ! SendReplanning(replanningDtos.asScala.toSeq, last)
+    actorSystem ! SendReplanning(replanningDtos, last)
   }
 
   def sendWorkerAssignments(): Unit = {
@@ -42,6 +42,7 @@ class MasterMain(mySimConfig: MySimConfig, network: Network, masterSim: MasterSi
   }
 
   def terminateSystem(): Unit = {
+    actorSystem ! TerminateSystem()
     actorSystem.terminate()
   }
 

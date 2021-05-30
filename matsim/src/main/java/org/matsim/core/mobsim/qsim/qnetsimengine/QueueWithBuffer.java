@@ -21,6 +21,7 @@ package org.matsim.core.mobsim.qsim.qnetsimengine;
 
 import java.util.*;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
@@ -72,6 +73,7 @@ import org.matsim.vis.snapshotwriters.VisVehicle;
  */
 final class QueueWithBuffer implements QLaneI, SignalizeableItem {
 	private static final Logger log = Logger.getLogger( QueueWithBuffer.class ) ;
+//	private final Logger myLogger;
 
 	static final class Builder implements LaneFactory {
 		private VehicleQ<QVehicle> vehicleQueue = new FIFOVehicleQ() ;
@@ -224,6 +226,12 @@ final class QueueWithBuffer implements QLaneI, SignalizeableItem {
 					+ " the warning if it works. kai, sep'14") ;
 		}
 
+//		myLogger = Logger.getLogger("myQueueLogger" + qlink.getId().toString());
+//		if (!qlink.getId().equals(Id.createLinkId("646509"))) {
+//			myLogger.setLevel(Level.OFF);
+//		} else
+//			myLogger.setLevel(Level.INFO);
+
 	}
 
 	@Override
@@ -233,6 +241,7 @@ final class QueueWithBuffer implements QLaneI, SignalizeableItem {
 
 	@Override
 	public final void addFromWait(final QVehicle veh) {
+//		myLogger.info("Try adding from wait " + veh.getId().toString());
 		//To protect against calling addToBuffer() without calling hasFlowCapacityLeft() first.
 		//This only could happen for addFromWait(), because it can be called from outside QueueWithBuffer
 		if (flowcap_accumulate.getValue() <= 0.0 && veh.getVehicle().getType().getPcuEquivalents() > context.qsimConfig
@@ -240,10 +249,12 @@ final class QueueWithBuffer implements QLaneI, SignalizeableItem {
 			throw new IllegalStateException("Buffer of link " + this.id + " has no space left!");
 		}
 
+//		myLogger.info("Added from wait " + veh.getId().toString());
 		addToBuffer(veh);
 	}
 
 	private void addToBuffer(final QVehicle veh) {
+//		myLogger.info("Adding to buffer " + veh.getId().toString());
 		// yy might make sense to just accumulate to "zero" and go into negative when something is used up.
 		// kai/mz/amit, mar'12
 
@@ -274,6 +285,10 @@ final class QueueWithBuffer implements QLaneI, SignalizeableItem {
 		if(context.qsimConfig.isUsingFastCapacityUpdate() ){
 			updateFastFlowAccumulation();
 		}
+
+		//todo zbadać ten flowcap
+		//może on się nie updateuje, bo ciągle jest offering
+		//dlaczego nie robi się stuck? Porównać z ze zwykłym matsimem
 
 		return flowcap_accumulate.getValue() > 0.0 || veh.getVehicle().getType()
 				.getPcuEquivalents() <= context.qsimConfig.getPcuThresholdForFlowCapacityEasing();
@@ -308,6 +323,14 @@ final class QueueWithBuffer implements QLaneI, SignalizeableItem {
 
 	@Override
 	public final void initBeforeSimStep() {
+//		myLogger.info("Step " + this.context.getSimTimer().getTimeOfDay());
+//		myLogger.info("Buffer size " + buffer.size());
+//		myLogger.info("Veh queue size " + vehQueue.size());
+//		myLogger.info("Last movement time " + getLastMovementTimeOfFirstVehicle());
+//		myLogger.info("Storage capacity " + getStorageCapacity());
+//		myLogger.info("Used storage capacity " + usedStorageCapacity);
+//		myLogger.info("Is accepting " + isAcceptingFromUpstream());
+//		myLogger.info("Is offering " + !isNotOfferingVehicle());
 		if(!context.qsimConfig.isUsingFastCapacityUpdate() ){
 			updateSlowFlowAccumulation();
 		}
@@ -482,6 +505,7 @@ final class QueueWithBuffer implements QLaneI, SignalizeableItem {
 		while((veh = peekFromVehQueue()) !=null){
 			//we have an original QueueLink behaviour
 			if (veh.getEarliestLinkExitTime() > now){
+//				myLogger.info("No vehicles to move from queue to buffer");
 				return;
 			}
 
@@ -508,6 +532,7 @@ final class QueueWithBuffer implements QLaneI, SignalizeableItem {
 			// Check if veh has reached destination:
 			if ( driver.isWantingToArriveOnCurrentLink() ) {
 				if (qLink.letVehicleArrive( veh )) {
+//					myLogger.info("Driver arrived " + veh.getId());
 					// remove _after_ processing the arrival to keep link active:
 					removeVehicleFromQueue( veh ) ;
 					continue;
@@ -518,11 +543,14 @@ final class QueueWithBuffer implements QLaneI, SignalizeableItem {
 
 			/* is there still any flow capacity left? */
 			if (!hasFlowCapacityLeft(veh) ) {
+//				myLogger.info("No flow capacity left" + veh.getId());
 				return;
 			}
 
+//			myLogger.info("Adding to buffer from queue" + veh.getId());
 			addToBuffer(veh);
 			removeVehicleFromQueue(veh);
+//			myLogger.info("Removing from queue" + veh.getId());
 			if(context.qsimConfig.isRestrictingSeepage()
 					&& context.qsimConfig.getLinkDynamics()==LinkDynamics.SeepageQ
 					&& context.qsimConfig.getSeepModes().contains(veh.getDriver().getMode()) ) {
@@ -681,6 +709,7 @@ final class QueueWithBuffer implements QLaneI, SignalizeableItem {
 	public final QVehicle popFirstVehicle() {
 		double now = context.getSimTimer().getTimeOfDay() ;
 		QVehicle veh = removeFirstVehicle();
+//		myLogger.info("Popping vehicle " + veh);
 		if (veh == null) {
 //			Logger.getRootLogger().info("popping null !!!!");
 		} else {
@@ -697,6 +726,7 @@ final class QueueWithBuffer implements QLaneI, SignalizeableItem {
 	private final QVehicle removeFirstVehicle(){
 		double now = context.getSimTimer().getTimeOfDay() ;
 		QVehicle veh = buffer.poll();
+//		myLogger.info("Removing vehicle " + veh);
 		bufferLastMovedTime = now; // just in case there is another vehicle in the buffer that is now the new front-most
 		if( context.qsimConfig.isUsingFastCapacityUpdate() ) {
 			flowcap_accumulate.setTimeStep(now - 1);
@@ -772,6 +802,7 @@ final class QueueWithBuffer implements QLaneI, SignalizeableItem {
 
 	@Override
 	public final void addFromUpstream(final QVehicle veh) {
+//		myLogger.info("Adding from upstream " + veh);
 		double now = context.getSimTimer().getTimeOfDay() ;
 
 		if (this.context.qsimConfig.isUseLanes() ) {

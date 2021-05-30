@@ -21,7 +21,6 @@
 package org.matsim.core.mobsim.qsim.qnetsimengine;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -45,6 +44,9 @@ import org.matsim.lanes.Lane;
  * Represents a node in the QSimulation.
  */
 final class QNodeImpl extends AbstractQNode {
+
+	private Logger logger = Logger.getRootLogger();
+
 	private static final Logger log = Logger.getLogger(QNodeImpl.class);
 	public static class Builder {
 		private final NetsimInternalInterface netsimEngine;
@@ -204,11 +206,16 @@ final class QNodeImpl extends AbstractQNode {
 				shouldCheckForStuck = true;
 				break;
 		}
-		if (shouldCheckForStuck && !fromLane.isNotOfferingVehicle()) {
+		if (shouldCheckForStuck) {
 			QVehicle veh = fromLane.getFirstVehicle();
 			if (vehicleIsStuck(fromLane, now)) {
-				Logger.getRootLogger().warn("Vehicle stuck on " + fromLane.getId() + " because " + fromLane.getLastMovementTimeOfFirstVehicle());
-				moveVehicleFromInlinkToAbort(veh, fromLane, now, fromLink.getLink().getId());
+				MoveVehicleDto moveVehicleDto = addToBatchStuck(veh, fromLink, fromLane);
+				if (moveVehicleDto == null)
+					return;
+//				logger.info("Vehicle stuck at " + context.getSimTimer().getTimeOfDay() + " " + moveVehicleDto);
+				moveBatch(moveVehicleDto.getToLinkId(), Collections.singletonList(moveVehicleDto), true);
+				//todo zrobione jest przesuwanie po jednym jeśli utknęły, trzeba sprawdzić jak jest to w zwykłej wersji
+				//na razie nie sprawdzam czy jest aborted, powinno być ok
 			}
 		}
 	}
@@ -226,7 +233,7 @@ final class QNodeImpl extends AbstractQNode {
 				if (batch.isEmpty())
 					return MoveBatchResult.FINISHED;
 				else {
-					return moveBatch(batchLinkId, batch) ? MoveBatchResult.CONTINUE : MoveBatchResult.FINISHED;
+					return moveBatch(batchLinkId, batch) ? MoveBatchResult.CONTINUE : MoveBatchResult.SOME_REJECTED;
 					//todo co jak np. tutaj zostaną zaakceptowane 2 z 3?
 //					return true;
 				}
@@ -237,18 +244,24 @@ final class QNodeImpl extends AbstractQNode {
 		}
 
 		if (!batch.isEmpty()) {
-			return moveBatch(batchLinkId, batch) ? MoveBatchResult.CONTINUE : MoveBatchResult.FINISHED;
+			return moveBatch(batchLinkId, batch) ? MoveBatchResult.CONTINUE : MoveBatchResult.SOME_REJECTED;
 		}
 		return MoveBatchResult.FINISHED;
 	}
 
 	private boolean moveBatch(Id<Link> linkId, List<MoveVehicleDto> batch) {
+		return moveBatch(linkId, batch, false);
+	}
+
+	private boolean moveBatch(Id<Link> linkId, List<MoveVehicleDto> batch, boolean stuck) {
 		Id<Node> toNodeId = this.netsimEngine.getNetsimNetwork().getNetsimLinks().get(linkId).getToNode().getNode().getId();
 		Integer workerId = netsimEngine.getQSim().getNodesWorkerIds().get(toNodeId);
 		if (workerId.equals(this.netsimEngine.getQSim().getWorkerId())) {
-			return acceptVehicles(batch, true).size() == batch.size();
+//			Logger.getRootLogger().info("move local");
+			return acceptVehicles(batch, true, stuck).size() == batch.size();
 		} else {
-			List<AcceptedVehiclesDto> accepted = netsimEngine.getQSim().getWorkerDelegate().update(workerId, batch, now);
+//			Logger.getRootLogger().info("move other");
+			List<AcceptedVehiclesDto> accepted = netsimEngine.getQSim().getWorkerDelegate().update(workerId, batch, stuck);
 			handleAccepted(accepted);
 			return accepted.size() == batch.size();
 		}
@@ -275,117 +288,38 @@ final class QNodeImpl extends AbstractQNode {
 		buffer.poll();
 		MobsimDriverAgent driver = veh.getDriver();
 		Id<Node> toNodeId = this.netsimEngine.getNetsimNetwork().getNetsimLinks().get(nextLinkId).getToNode().getNode().getId();
-		return new MoveVehicleDto(node.getId(), toNodeId, fromLink.getLink().getId(), fromLane.getId(), veh.getId(), driver.getId(), driver.getLinkIndex(), driver.getPlanIndex(), nextLinkId, netsimEngine.getQSim().getSimTimer().getTimeOfDay());
+		return new MoveVehicleDto(node.getId(), toNodeId, fromLink.getLink().getId(), fromLane.getId(), veh.getId(), driver.getId(), driver.getLinkIndex(), driver.getPlanIndex(), nextLinkId);
 	}
 
-	private boolean myMoveVehicleOverNode( final QVehicle veh, QLinkI fromLink, final QLaneI fromLane, final double now ) {
+	private MoveVehicleDto addToBatchStuck(QVehicle veh, QLinkI fromLink, final QLaneI fromLane) {
+		if (veh == null)
+			return null;
 		Id<Link> nextLinkId = veh.getDriver().chooseNextLinkId();
-		Link currentLink = fromLink.getLink() ;
-
-		AcceptTurn turn = turnAcceptanceLogic.isAcceptingTurn(currentLink, fromLane, nextLinkId, veh, this.netsimEngine.getNetsimNetwork(), now);
-		if ( turn.equals(AcceptTurn.ABORT) ) {
-			moveVehicleFromInlinkToAbort( veh, fromLane, now, currentLink.getId() ) ;
-			return true ;
-		} else if ( turn.equals(AcceptTurn.WAIT) ) {
-			return false;
-		}
-
-		QLinkI nextQueueLink = this.netsimEngine.getNetsimNetwork().getNetsimLinks().get(nextLinkId);
-		QLaneI nextQueueLane = nextQueueLink.getAcceptingQLane() ;
-
-		if (nextQueueLane.isAcceptingFromUpstream()) {
-			moveVehicleFromInlinkToOutlink(veh, currentLink.getId(), fromLane, nextLinkId, nextQueueLane);
-			return true;
-		}
-
-		///łatwiej byłoby remove, trzeba dodatkowych sprawdzeń
-		if (vehicleIsStuck(fromLane, now)) {
-			/* We just push the vehicle further after stucktime is over, regardless
-			 * of if there is space on the next link or not.. optionally we let them
-			 * die here, we have a config setting for that!
-			 */
-			if (this.context.qsimConfig.isRemoveStuckVehicles()) {
-				moveVehicleFromInlinkToAbort(veh, fromLane, now, currentLink.getId());
-				return false ;
-			} else {
-				moveVehicleFromInlinkToOutlink(veh, currentLink.getId(), fromLane, nextLinkId, nextQueueLane);
-				return true;
-				// (yyyy why is this returning `true'?  Since this is a fix to avoid gridlock, this should proceed in small steps.
-				// kai, feb'12)
-			}
-		}
-
-		return false;
-
-	}
-
-	private List<MoveVehicleDto> getVehiclesReadyToLeave(final QLinkI link, final double now){
-		List<MoveVehicleDto> moveVehicleDtos = new LinkedList<>();
-		for (QLaneI lane : link.getOfferingQLanes()) {
-			Queue<QVehicle> buffer = lane.getBuffer();
-			while (!buffer.isEmpty()) {
-				QVehicle veh = buffer.poll();
-				if (!getVehicleOverNode(veh, link, lane, now)) {
-					break;
-				}
-				MobsimDriverAgent driver = veh.getDriver();
-				Id<Link> nextLinkId = driver.chooseNextLinkId();
-				Id<Node> toNodeId = this.netsimEngine.getNetsimNetwork().getNetsimLinks().get(nextLinkId).getToNode().getNode().getId();
-				MoveVehicleDto moveVehicleDto = new MoveVehicleDto(node.getId(), toNodeId, link.getLink().getId(), lane.getId(), veh.getId(), driver.getId(), driver.getLinkIndex(), driver.getPlanIndex(), nextLinkId, netsimEngine.getQSim().getSimTimer().getTimeOfDay());
-				moveVehicleDtos.add(moveVehicleDto);
-			}
-		}
-		return moveVehicleDtos;
-	}
-
-	private boolean getVehicleOverNode(QVehicle veh, QLinkI fromLink, QLaneI fromLane, double now) {
-		Id<Link> nextLinkId = veh.getDriver().chooseNextLinkId();
-		Link currentLink = fromLink.getLink() ;
-
-		AcceptTurn turn = turnAcceptanceLogic.isAcceptingTurn(currentLink, fromLane, nextLinkId, veh, this.netsimEngine.getNetsimNetwork(), now);
-		if ( turn.equals(AcceptTurn.ABORT) ) {
-			//todo moveToAbort potem
-			return true ;
-		} else if ( turn.equals(AcceptTurn.WAIT) ) {
-			return false;
-		}
-
-//		QLinkI nextQueueLink = this.netsimEngine.getNetsimNetwork().getNetsimLinks().get(nextLinkId);
-//		QLaneI nextQueueLane = nextQueueLink.getAcceptingQLane() ;
-		return true;
-		//todo stuck vehicles
-		//tutaj jest problem, jeśli je abortujemy to potem inny node musi je wprowadzić z powrotem, chyba trzeba przesyłać wszystkie z flagą stuck żeby puścic mimo capacity
+		MobsimDriverAgent driver = veh.getDriver();
+		Id<Node> toNodeId = this.netsimEngine.getNetsimNetwork().getNetsimLinks().get(nextLinkId).getToNode().getNode().getId();
+		return new MoveVehicleDto(node.getId(), toNodeId, fromLink.getLink().getId(), fromLane.getId(), veh.getId(), driver.getId(), driver.getLinkIndex(), driver.getPlanIndex(), nextLinkId);
 	}
 
 	@Override
-	public List<AcceptedVehiclesDto> acceptVehicles(List<MoveVehicleDto> moveVehicleDtos, boolean local) {
+	public List<AcceptedVehiclesDto> acceptVehicles(List<MoveVehicleDto> moveVehicleDtos, boolean local, boolean stuck) {
 //		Logger.getRootLogger().info("accepting vehicles");
 		List<AcceptedVehiclesDto> acceptedVehicles = new LinkedList<>();
 		for (MoveVehicleDto moveVehicleDto : moveVehicleDtos) {
-			if (!acceptVehicle(moveVehicleDto, local))
+			if (!acceptVehicle(moveVehicleDto, local, stuck))
 				break;
 			acceptedVehicles.add(moveVehicleDto.toAcceptedVehiclesDto());
 		}
 		return acceptedVehicles;
 	}
 
-	@Override
-	public Map<Id<Link>, List<AcceptedVehiclesDto>> acceptVehiclesLocal(List<MoveVehicleDto> moveVehicleDtos) {
-		//todo to tak samo na wątki
-		//może da się to lepiej zrobić?
-		List<AcceptedVehiclesDto> accepted = acceptVehicles(moveVehicleDtos, true);
-		return accepted.stream()
-				.collect(Collectors.groupingBy(AcceptedVehiclesDto::getLinkId));
-	}
-
-	public boolean acceptVehicle(MoveVehicleDto moveVehicleDto, boolean local) {
+	public boolean acceptVehicle(MoveVehicleDto moveVehicleDto, boolean local, boolean stuck) {
 		Id<Link> nextLinkId = moveVehicleDto.getToLinkId();
 		QLinkI nextQueueLink = this.netsimEngine.getNetsimNetwork().getNetsimLinks().get(nextLinkId);
 		QLaneI nextQueueLane = nextQueueLink.getAcceptingQLane() ;
 
 		MobsimVehicle veh = netsimEngine.getQSim().getVehicles().get(moveVehicleDto.getVehicleId());
 
-		if (nextQueueLane.isAcceptingFromUpstream()) {
+		if (stuck || nextQueueLane.isAcceptingFromUpstream()) {
 			acceptVehicleFromInlinkToOutlink((QVehicle) veh, moveVehicleDto.getFromLinkId(), moveVehicleDto.getFromLaneId(), nextLinkId, nextQueueLane, moveVehicleDto.getPersonId(), moveVehicleDto.getPersonLinkIndex(), moveVehicleDto.getPlanIndex(), local);
 			return true;
 		}
@@ -441,10 +375,10 @@ final class QNodeImpl extends AbstractQNode {
 		for (AcceptedVehiclesDto acceptedVehicle : accepted) {
 
 			//todo to tylko sprawdzenie czy działa
-			QVehicle firstVehicle = lane.getFirstVehicle();
-			if (!firstVehicle.getId().equals(acceptedVehicle.getVehicleId())) {
-				throw new RuntimeException("Invalid id");
-			}
+//			QVehicle firstVehicle = lane.getFirstVehicle();
+//			if (!firstVehicle.getId().equals(acceptedVehicle.getVehicleId())) {
+//				throw new RuntimeException("Invalid id");
+//			}
 			QVehicle poppedVeh = lane.popFirstVehicle();
 			netsimEngine.getQSim().removeAgent(poppedVeh.getDriver().getId());
 			poppedVeh.getDriver();

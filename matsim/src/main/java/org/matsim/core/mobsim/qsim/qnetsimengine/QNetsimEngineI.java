@@ -1,6 +1,5 @@
 package org.matsim.core.mobsim.qsim.qnetsimengine;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -27,7 +26,7 @@ public interface QNetsimEngineI extends MobsimEngine, NetsimEngine {
 
 	void doSimStep(double time);
 
-	List<AcceptedVehiclesDto> acceptVehicles(int workerId, List<MoveVehicleDto> moveVehicleDtos);
+	List<AcceptedVehiclesDto> acceptVehicles(int workerId, List<MoveVehicleDto> moveVehicleDtos, boolean stuck);
 
 	int getNumberOfSimulatedLinks();
 

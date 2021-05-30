@@ -40,25 +40,22 @@ class WorkerMain(config: MySimConfig, workerSim: WorkerSim) {
     actorSystem ! StartIteration()
   }
 
-  def update(workerId: Int, moveVehicleDtos: java.util.List[MoveVehicleDto], time: Double) = {
+  def update(workerId: Int, moveVehicleDtos: java.util.List[MoveVehicleDto], stuck: Boolean) = {
     //todo czy tutaj trzeba po jednym aktorze na każdy wątek?
     //czy one są w stanie przetwarzać te future'y równolegle?
     //może trzeba coś w konfiguracji dispachera akki
-    val future: Future[Accepted] = actorSystem.ask(ref => SendUpdate(workerId, moveVehicleDtos.asScala.toSeq, ref))
+    val future: Future[Accepted] = actorSystem.ask(ref => SendUpdate(workerId, moveVehicleDtos, stuck, ref))
       .mapTo[Accepted]
     Await.ready(future, Duration.Inf)
     future.value.get.get.accepted
   }
 
-  def accepted(workerId: Int, accepted: java.util.Map[Id[Node], util.Collection[java.util.List[AcceptedVehiclesDto]]]): Unit = {
-    val acceptedMap = accepted.asScala
-      .map({ case (linkId, a) => (linkId.toString, a) })
-      .toMap
-    actorSystem ! SendAccepted(workerId, acceptedMap)
+  def sendVehicleDeparture(toNodeWorkerId: Int, departVehicleDto: DepartVehicleDto) = {
+    actorSystem ! SendVehicleDeparture(toNodeWorkerId, departVehicleDto)
   }
 
-  def sendFinished(): Unit = {
-    actorSystem ! SendMovingNodesFinished()
+  def sendFinishedMovingNodes(readyToFinish: Boolean): Unit = {
+    actorSystem ! SendMovingNodesFinished(readyToFinish)
   }
 
   def sendReadyForNextMoving(readyToFinishWithNeighbours: Boolean): Unit = {
@@ -70,7 +67,7 @@ class WorkerMain(config: MySimConfig, workerSim: WorkerSim) {
   }
 
   def sendEvents(events : java.util.List[EventDto]): Unit = {
-    actorSystem ! SendEvents(events.asScala.toSeq)
+    actorSystem ! SendEvents(events)
   }
 
   def sendAfterMobsim(): Unit = {

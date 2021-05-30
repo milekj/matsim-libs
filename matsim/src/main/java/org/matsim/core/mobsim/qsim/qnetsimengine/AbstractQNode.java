@@ -24,8 +24,6 @@
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Node;
 
 /**
@@ -117,12 +115,7 @@ abstract class AbstractQNode implements QNodeI {
 	}
 
 	@Override
-	public List<AcceptedVehiclesDto> acceptVehicles(List<MoveVehicleDto> moveVehicleDtos, boolean local) {
-		return null;
-	}
-
-	@Override
-	public Map<Id<Link>, List<AcceptedVehiclesDto>> acceptVehiclesLocal(List<MoveVehicleDto> moveVehicleDtos) {
+	public List<AcceptedVehiclesDto> acceptVehicles(List<MoveVehicleDto> moveVehicleDtos, boolean local, boolean stuck) {
 		return null;
 	}
 

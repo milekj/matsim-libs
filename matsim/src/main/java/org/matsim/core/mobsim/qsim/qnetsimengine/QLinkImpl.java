@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.VehicleEntersTrafficEvent;
@@ -55,6 +56,7 @@ import org.matsim.vis.snapshotwriters.VisData;
 public final class QLinkImpl extends AbstractQLink implements SignalizeableItem {
 	@SuppressWarnings("unused")
 	private final static Logger log = Logger.getLogger(QLinkImpl.class);
+//	private final Logger myLogger;
 	
 	public static final class Builder {
 		private NetsimInternalInterface netsimEngine ;
@@ -114,6 +116,11 @@ public final class QLinkImpl extends AbstractQLink implements SignalizeableItem 
 		this.qlane = roadFactory.createLane(this);
 		this.visdata = this.new VisDataImpl() ; // instantiating this here and not earlier so we can cache some things
 		super.setTransitQLink( new TransitQLink(this.qlane) ) ;
+//		myLogger = Logger.getLogger("myLinkLogger" + link2.getId().toString());
+//		if (!link2.getId().equals(Id.createLinkId("646509"))) {
+//			myLogger.setLevel(Level.OFF);
+//		} else
+//			myLogger.setLevel(Level.INFO);
 	}
 
 	@Override
@@ -124,6 +131,12 @@ public final class QLinkImpl extends AbstractQLink implements SignalizeableItem 
 
 	@Override
 	public boolean doSimStep() {
+//		myLogger.info("Step " + this.context.getSimTimer().getTimeOfDay());
+//		myLogger.info("Active " + this.isActive());
+//		myLogger.info("Space capacity " + this.getSpaceCap());
+//		myLogger.info("Waiting list size " + this.getWaitingList().size());
+//		myLogger.info("Buffer size " + qlane.getBuffer().size());
+//		myLogger.info("\n");
 		double now = context.getSimTimer().getTimeOfDay() ;
 		qlane.initBeforeSimStep();
 		

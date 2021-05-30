@@ -19,9 +19,7 @@ public interface WorkerDelegate {
 
     void terminateSystem();
 
-    List<AcceptedVehiclesDto> update(Integer workerId, List<MoveVehicleDto> v, double timeOfDay);
-
-    void accepted(Integer workerId, Map<Id<Node>, Collection<List<AcceptedVehiclesDto>>> accepted);
+    List<AcceptedVehiclesDto> update(Integer workerId, List<MoveVehicleDto> v, boolean stuck);
 
     void beforeIteration();
 

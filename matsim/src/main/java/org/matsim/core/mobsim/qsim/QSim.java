@@ -56,18 +56,12 @@ import org.matsim.core.mobsim.framework.HasPerson;
 import org.matsim.core.mobsim.framework.MobsimAgent;
 import org.matsim.core.mobsim.framework.MobsimTimer;
 import org.matsim.core.mobsim.framework.listeners.MobsimListener;
+import org.matsim.core.mobsim.qsim.agents.BasicPlanAgentImpl;
+import org.matsim.core.mobsim.qsim.agents.PersonDriverAgentImpl;
 import org.matsim.core.mobsim.qsim.changeeventsengine.NetworkChangeEventsEngineI;
-import org.matsim.core.mobsim.qsim.interfaces.ActivityHandler;
+import org.matsim.core.mobsim.qsim.interfaces.*;
 import org.matsim.core.mobsim.qsim.interfaces.AgentCounter;
-import org.matsim.core.mobsim.qsim.interfaces.DepartureHandler;
-import org.matsim.core.mobsim.qsim.interfaces.MobsimEngine;
-import org.matsim.core.mobsim.qsim.interfaces.MobsimVehicle;
-import org.matsim.core.mobsim.qsim.interfaces.Netsim;
-import org.matsim.core.mobsim.qsim.interfaces.NetsimNetwork;
-import org.matsim.core.mobsim.qsim.qnetsimengine.AcceptedVehiclesDto;
-import org.matsim.core.mobsim.qsim.qnetsimengine.MoveVehicleDto;
-import org.matsim.core.mobsim.qsim.qnetsimengine.NetsimEngine;
-import org.matsim.core.mobsim.qsim.qnetsimengine.QNetsimEngineI;
+import org.matsim.core.mobsim.qsim.qnetsimengine.*;
 import org.matsim.core.network.NetworkChangeEvent;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.misc.Time;
@@ -468,8 +462,8 @@ public final class QSim extends Thread implements VisMobsim, Netsim, ActivityEnd
 		return doContinue;
 	}
 
-	public List<AcceptedVehiclesDto> acceptVehicles(int workerId, List<MoveVehicleDto> moveVehicleDtos) {
-		return qNetsimEngine.acceptVehicles(workerId, moveVehicleDtos);
+	public List<AcceptedVehiclesDto> acceptVehicles(int workerId, List<MoveVehicleDto> moveVehicleDtos, boolean stuck) {
+		return qNetsimEngine.acceptVehicles(workerId, moveVehicleDtos, stuck);
 	}
 
 	public void insertAgentIntoMobsim(final MobsimAgent agent) {
@@ -557,6 +551,17 @@ public final class QSim extends Thread implements VisMobsim, Netsim, ActivityEnd
 	private void arrangeAgentDeparture(final MobsimAgent agent) {
 		double now = this.getSimTimer().getTimeOfDay();
 		Id<Link> linkId = agent.getCurrentLinkId();
+		NetsimLink currentLink = getNetsimNetwork().getNetsimLink(linkId);
+		Id<Node> toNodeId = currentLink.getLink().getToNode().getId();
+		Integer toNodeWorkerId = nodesWorkerIds.get(toNodeId);
+		if (!toNodeWorkerId.equals(workerId)) {
+			PersonDriverAgentImpl personDriverAgent = (PersonDriverAgentImpl) agent;
+			DepartVehicleDto departVehicleDto = new DepartVehicleDto(agent.getId(), personDriverAgent.getCurrentLinkIndex(), personDriverAgent.getPlanIndex(), agent.getCurrentLinkId());
+			workerDelegate.sendVehicleDeparture(toNodeWorkerId, departVehicleDto);
+			System.out.println("Sending vehicle departure " + personDriverAgent);
+			removeAgent(agent.getId());
+			return;
+		}
 		Gbl.assertIf( linkId!=null );
 		events.processEvent(new PersonDepartureEvent(now, agent.getId(), linkId, agent.getMode()));
 
@@ -827,5 +832,15 @@ public final class QSim extends Thread implements VisMobsim, Netsim, ActivityEnd
 
 	public ImmutableSetMultimap<Integer, Id<Node>> getWorkerNodesIds() {
 		return workerNodesIds;
+	}
+
+	public void handleVehicleDeparture(DepartVehicleDto departVehicleDto) {
+		System.out.println("Received vehicle departure " + departVehicleDto);
+		Id<Person> personId = departVehicleDto.getPersonId();
+		MobsimAgent mobsimAgent = allAgents.get(personId);
+		PersonDriverAgentImpl personDriverAgent = (PersonDriverAgentImpl) mobsimAgent;
+		agents.put(personId, mobsimAgent);
+		personDriverAgent.notifyVehicleDeparture(departVehicleDto.getToLinkId(), departVehicleDto.getPersonLinkIndex(), departVehicleDto.getPlanIndex());
+		this.arrangeAgentDeparture(mobsimAgent);
 	}
 }

@@ -25,9 +25,9 @@ object UpdateActor {
 
       Behaviors.receiveMessage {
 
-        case Update(workerId, moveVehicleDtos, replyTo) =>
+        case Update(workerId, moveVehicleDtos, stuck, replyTo) =>
 
-          val accepted = workerSim.acceptVehicles(new Integer(workerId), moveVehicleDtos.asJava)
+          val accepted = workerSim.acceptVehicles(new Integer(workerId), moveVehicleDtos, stuck)
           replyTo ! Accepted(accepted)
           Behaviors.stopped
 

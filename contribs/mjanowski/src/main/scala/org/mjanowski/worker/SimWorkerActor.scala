@@ -5,7 +5,9 @@ import java.util
 import akka.actor.typed.receptionist.Receptionist
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
-import org.mjanowski.master._
+import org.mjanowski.master
+import org.mjanowski.master.{AfterMobsim, AfterSimStep, Events, MasterCommand, RegisterWorker, SimMasterActor}
+import org.mjanowski.worker
 
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.{CollectionHasAsScala, MapHasAsJava, SetHasAsJava}
@@ -89,9 +91,9 @@ object SimWorkerActor {
             workerSim.runIteration()
           Behaviors.same
 
-        case SendUpdate(workerId, moveVehicleDtos, replyTo) =>
+        case SendUpdate(workerId, moveVehicleDtos, stuck, replyTo) =>
 
-          SimWorkerActor.workerRefs(workerId) ! Update(workerId, moveVehicleDtos, replyTo)
+          SimWorkerActor.workerRefs(workerId) ! Update(workerId, moveVehicleDtos, stuck, replyTo)
           Behaviors.same
 
         case m : Update =>
@@ -142,6 +144,10 @@ object SimWorkerActor {
 //          Logger.getRootLogger.info("Received replanning " + last)
           SimWorkerActor.workerSim.handleReplanning(replanningDtos, last)
           Behaviors.same
+
+        case TerminateSystem() =>
+          context.system.terminate()
+          Behaviors.stopped
 
 
       }
