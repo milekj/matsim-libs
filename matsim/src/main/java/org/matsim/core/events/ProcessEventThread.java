@@ -49,15 +49,19 @@ import org.matsim.core.gbl.Gbl;
 		preInputBuffer = new ArrayList<Event>( preInputBufferMaxLength + 1);
 	}
 
+	public void processEvents(List<Event> events) {
+		eventQueue.addAll(events);
+	}
+
 	public synchronized void processEvent(final Event event) {
 		// first approach (quick on office computer, but not on satawal)
-		// eventQueue.add(event);
+		 eventQueue.add(event);
 
 		// second approach, lesser locking => faster on Satawal
-		preInputBuffer.add(event);
-		if (preInputBuffer.size() > preInputBufferMaxLength) {
-			emptyPreBuffer();
-		}
+//		preInputBuffer.add(event);
+//		if (preInputBuffer.size() > preInputBufferMaxLength) {
+//			emptyPreBuffer();
+//		}
 	}
 
 	private void emptyPreBuffer() {

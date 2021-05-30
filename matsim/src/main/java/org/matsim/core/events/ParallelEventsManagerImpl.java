@@ -19,6 +19,7 @@
 package org.matsim.core.events;
 
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
@@ -116,6 +117,20 @@ public final class ParallelEventsManagerImpl implements EventsManager {
 		} else {
 			for (int i = 0; i < eventsProcessThread.length; i++) {
 				eventsProcessThread[i].getEvents().processEvent(event);
+			}
+		}
+	}
+
+	public void processEvents(List<Event> events) {
+		if (parallelMode) {
+			for (int i = 0; i < eventsProcessThread.length; i++) {
+				eventsProcessThread[i].processEvents(events);
+			}
+		} else {
+			for (int i = 0; i < eventsProcessThread.length; i++) {
+				for (Event event : events) {
+					eventsProcessThread[i].getEvents().processEvent(event);
+				}
 			}
 		}
 	}
